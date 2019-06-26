@@ -7,14 +7,19 @@ Our protocol is a JSON protocol. This means that we have the following types at 
 ## Layers
 
 The Streamr Protocol is made of three layers:
-- **Communication Layer:** Responsible for end-to-end unicast/multicast/broadcast communication primitives in a centralized network or a p2p network. Can be HTTP, Websocket or a custom gossiping protocol.
-- **Control Layer:** Defines the control messages allowing communication entities to publish, subscribe, resend, etc... These messages are the payload of the Communication Layer messages.
+- **Network Layer:** Responsible for end-to-end unicast/multicast/broadcast communication primitives in the peer-to-peer network. Encapsulates messages from the Control Layer and defines other messages specific to communication between nodes that clients shouldn't be concerned with.
+- **Control Layer:** Defines the control messages allowing communication entities to publish, subscribe, resend, etc... These messages are encapsulated by the Network Layer.
 - **Message Layer:** Some messages in the Control Layer carry messages published in streams. The Message Layer defines the format of these message payloads, consisting of data and metadata of the messages.
 
-This documentation describes the Control Layer and Message Layer since they are common to any network configuration.
+This documentation describes the messages in each layer.
 
 ## Table of contents
-
+- [Network Layer](#network-layer)
+    - [StatusMessage](#statusmessage)
+    - [InstructionMessage](#instructionmessage)
+    - [FindStorageNodesMessage](#findstoragenodesmessage)
+    - [StorageNodesMessage](#storagenodesmessage)
+    - [WrapperMessage](#wrappermessage)
 - [Control Layer](#control-layer)
     - [PublishRequest](#publishrequest)
     - [SubscribeRequest](#subscriberequest)
@@ -36,9 +41,107 @@ This documentation describes the Control Layer and Message Layer since they are 
     - [MessageRef](#messageref)
 
 
+## Network Layer
+
+All messages of the Network Layer are transmitted as JSON arrays with the following fields: `[version, type, source, ...typeSpecificFields]`.
+`version` describes the version of the Network Layer. `type` is an integer to identify the message type according to the following table: 
+
+messageType | Description
+----------- | -----------
+0 | StatusMessage
+1 | InstructionMessage
+2 | FindStorageNodesMessage
+3 | StorageNodesMessage
+4 | WrapperMessage
+
+`source` is a string to identify the node that sent the message.
+
+### StatusMessage
+
+TODO: description of the purpose and usage of this message type.
+
+```
+[version, type, source, status]
+```
+Example:
+```
+["4.4.3", 0, "sender", "status"]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`status` | `string` | TODO
+
+### InstructionMessage
+
+TODO: description of the purpose and usage of this message type.
+
+```
+[version, type, source, streamId, nodeAddresses]
+```
+Example:
+```
+["4.4.3", 1, "sender", "stream-id", ["address1", "address2"]]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`streamId` | `string` | TODO
+`nodeAddresses` | `array` | TODO
+
+### FindStorageNodesMessage
+
+TODO: description of the purpose and usage of this message type.
+
+```
+[version, type, source, streamId]
+```
+Example:
+```
+["4.4.3", 2, "sender", "stream-id"]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`streamId` | `string` | TODO
+
+### StorageNodesMessage
+
+TODO: description of the purpose and usage of this message type.
+
+```
+[version, type, source, streamId, nodeAddresses]
+```
+Example:
+```
+["4.4.3", 1, "sender", "stream-id", ["address1", "address2"]]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`streamId` | `string` | TODO
+`nodeAddresses` | `array` | TODO
+
+### WrapperMessage
+
+Encapsulates messages of the Control Layer.
+
+```
+[version, type, source, controlLayerPayload]
+```
+Example:
+```
+// This encapsulates a SubscribeRequest (See in Control Layer section)
+["4.4.3", 4, "sender", [1, 9, "stream-id", 0, "my-session-token"]]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`controlLayerPayload` | ControlMessage | The array representation of the encapsulated `ControlMessage` (See Control Layer).
+
 ## Control Layer
 
-All messages of the control layer are transmitted as JSON arrays with the following fields : `[version, type, ...typeSpecificFields]`.
+All messages of the Control Layer are transmitted as JSON arrays with the following fields: `[version, type, ...typeSpecificFields]`. Each message of the Control Layer is a payload of the [WrapperMessage](#wrappermessage) defined in the Network Layer.
 `version` describes the version of the Control Layer. `type` is an integer to identify the message type according to the following table: 
 
 messageType | Description
@@ -58,11 +161,10 @@ messageType | Description
 12 | ResendFromRequest
 13 | ResendRangeRequest
 
-We start by describing the requests and then the responses.
+Every message listed above is a `ControlMessage`. We start by describing the requests and then the responses.
+Also see the [Javascript client](https://github.com/streamr-dev/streamr-client) documentation.
 
 ### Requests sent
-
-Also see the [Javascript client](https://github.com/streamr-dev/streamr-client) documentation.
 
 #### PublishRequest
 
