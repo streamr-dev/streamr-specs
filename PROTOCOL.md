@@ -20,6 +20,8 @@ This documentation describes the messages in each layer.
     - [FindStorageNodesMessage](#findstoragenodesmessage)
     - [StorageNodesMessage](#storagenodesmessage)
     - [WrapperMessage](#wrappermessage)
+    - [HandshakeRequest](#handshakerequest)
+	- [HandshakeResponse](#handshakeresponse)
 - [Control Layer](#control-layer)
     - [PublishRequest](#publishrequest)
     - [SubscribeRequest](#subscriberequest)
@@ -53,6 +55,8 @@ messageType | Description
 2 | FindStorageNodesMessage
 3 | StorageNodesMessage
 4 | WrapperMessage
+5 | HandshakeRequest
+6 | HandshakeResponse
 
 `source` is a string to identify the node that sent the message.
 
@@ -133,6 +137,38 @@ Example:
 ```
 // This encapsulates a SubscribeRequest (See in Control Layer section)
 ["4.4.3", 4, "sender", [1, 9, "stream-id", 0, "my-session-token"]]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`controlLayerPayload` | ControlMessage | The array representation of the encapsulated `ControlMessage` (See Control Layer).
+
+### HandshakeRequest
+
+Sent before any other messages to agree on long term parameters such as protocol versions.
+
+```
+[version, type, source, controlLayerVersion, messageLayerVersion, TODO: other params?]
+```
+Example:
+```
+["4.4.3", 5, "sender", 1, 31]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`controlLayerPayload` | ControlMessage | The array representation of the encapsulated `ControlMessage` (See Control Layer).
+
+### HandshakeResponse
+
+Sent in response to a `HandshakeRequest` to confirm the proposed parameters.
+
+```
+[version, type, source, controlLayerVersion, messageLayerVersion, TODO: other params?]
+```
+Example:
+```
+["4.4.3", 6, "sender", 1, 31]
 ```
 
 Field    | Type | Description
