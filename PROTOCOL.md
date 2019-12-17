@@ -148,32 +148,38 @@ Field    | Type | Description
 Sent before any other messages to agree on long term parameters such as protocol versions.
 
 ```
-[version, type, source, controlLayerVersion, messageLayerVersion, TODO: other params?]
+[version, type, source, nodeType, codeVersion, controlLayerVersion, messageLayerVersion]
 ```
 Example:
 ```
-["4.4.3", 5, "sender", 1, 31]
+["4.4.3", 5, "sender", "storage", "4.0.3", 1, 31]
 ```
 
 Field    | Type | Description
 -------- | ---- | --------
-`controlLayerPayload` | ControlMessage | The array representation of the encapsulated `ControlMessage` (See Control Layer).
+`nodeType` `string` | Type of the node ("node", "storage" or "tracker")
+`codeVersion` `string` | Version of the code base
+`controlLayerVersion` | `int` | Protocol version to be used for the [Control Layer](#control-layer)
+`messageLayerVersion` | `int` | Protocol version to be used for the [Message Layer](#message-layer)
 
 ### HandshakeResponse
 
 Sent in response to a `HandshakeRequest` to confirm the proposed parameters.
 
 ```
-[version, type, source, controlLayerVersion, messageLayerVersion, TODO: other params?]
+[version, type, source, nodeType, codeVersion, controlLayerVersion, messageLayerVersion]
 ```
 Example:
 ```
-["4.4.3", 6, "sender", 1, 31]
+["4.4.3", 5, "sender", "storage", "4.0.3", 1, 31]
 ```
 
 Field    | Type | Description
 -------- | ---- | --------
-`controlLayerPayload` | ControlMessage | The array representation of the encapsulated `ControlMessage` (See Control Layer).
+`nodeType` `string` | Type of the node ("node", "storage" or "tracker")
+`codeVersion` `string` | Version of the code base
+`controlLayerVersion` | `int` | Protocol version to be used for the [Control Layer](#control-layer)
+`messageLayerVersion` | `int` | Protocol version to be used for the [Message Layer](#message-layer)
 
 ## Control Layer
 
