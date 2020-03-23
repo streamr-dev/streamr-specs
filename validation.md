@@ -21,7 +21,7 @@ if (message is unsigned) {
 ```
 let S be the stream for which the key request is
 
-check that the message was received on an inbox stream
+check that the message was received on key exchange stream
 check that the signature is correct
 check that the publisher has stream_subscribe permission to S
 ```
@@ -31,7 +31,7 @@ check that the publisher has stream_subscribe permission to S
 ```
 let S be the stream for which the key response/reset is
 
-check that the message was received on an inbox stream
+check that the message was received on an key exchange stream
 check that the signature is correct
 check that the publisher has stream_publish permission to S
 ```
