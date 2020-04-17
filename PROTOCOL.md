@@ -482,8 +482,9 @@ Example of valid `content` for `contentType` 29 (group key response)
 Example of valid `content` for `contentType` 30 (group key reset)
 ```
 {
-  groupKey: "new-encrypted-group-key"
-  start: 9086906
+  "streamId": "id-of-stream-to-be-reset",
+  "groupKey": "new-encrypted-group-key"
+  "start": 9086906
 }
 ```
 
