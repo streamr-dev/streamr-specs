@@ -456,10 +456,11 @@ Content Type | Description
 Example of valid `content` for `contentType` 28 (group key request)
 ```
 {
-  publicKey: "subscriber-rsa-public-key"
-  range: { // optional
-    start: 342546546
-    end: 379080012
+  "streamId": "id-of-stream-to-be-decrypted",
+  "publicKey": "subscriber-rsa-public-key",
+  "range": { // optional
+    "start": 342546546,
+    "end": 379080012
   }
 }
 ```
@@ -467,12 +468,13 @@ Example of valid `content` for `contentType` 28 (group key request)
 Example of valid `content` for `contentType` 29 (group key response)
 ```
 {
-  keys: [{
-    groupKey: "some-encrypted-group-key"
-    start: 342546000
+  "streamId": "id-of-stream-to-be-decrypted",
+  "keys": [{
+    "groupKey": "some-encrypted-group-key"
+    "start": 342546000
   }, {
-    groupKey: "some-later-encrypted-group-key"
-    start: 369146000
+    "groupKey": "some-later-encrypted-group-key"
+    "start": 369146000
   }]
 }
 ```
