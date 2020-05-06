@@ -141,8 +141,10 @@ Field    | Type | Description
 
 ## Control Layer
 
-All messages of the Control Layer are transmitted as JSON arrays with the following fields: `[version, type, ...typeSpecificFields]`. Each message of the Control Layer is a payload of the [WrapperMessage](#wrappermessage) defined in the Network Layer.
-`version` describes the version of the Control Layer. `type` is an integer to identify the message type according to the following table: 
+This document describes version `2` of the Control Layer protocol.
+
+All messages of the Control Layer are transmitted as JSON arrays with the following fields: `[version, type, requestId, ...typeSpecificFields]`. Each message of the Control Layer is a payload of the [WrapperMessage](#wrappermessage) defined in the Network Layer.
+`version` describes the version of the Control Layer. `type` is an integer to identify the message type according to the below table. `requestId` is a string that gets echoed back in the response(s). It should be unique within the same connection. 
 
 messageType | Description
 ----------- | -----------
@@ -162,7 +164,6 @@ messageType | Description
 13 | ResendRangeRequest
 
 Every message listed above is a `ControlMessage`. We start by describing the requests and then the responses.
-Also see the [Javascript client](https://github.com/streamr-dev/streamr-client) documentation.
 
 ### Requests sent
 
@@ -171,16 +172,16 @@ Also see the [Javascript client](https://github.com/streamr-dev/streamr-client) 
 Publishes a new message to a stream. Requires a write permission to the stream. Authentication requires the session token to be set. It contains a `StreamMessage` as a payload at the Message Layer level. The `StreamMessage` representation is also an array (nested in the `PublishRequest` array) which is described in the [StreamMessage](#streammessage) section.
 
 ```
-[version, type, streamMessage, sessionToken]
+[version, type, requestId, streamMessage, sessionToken]
 ```
 Example:
 ```
-[1, 8, [...streamMessageFields], "my-session-token"]
+[2, 8, "request-id", [...streamMessageFields], "my-session-token"]
 ```
 
 Field    | Type | Description
 -------- | ---- | --------
-`streamMessage` | StreamMessage | The array representation of the `StreamMessage` to publish. Defined in the Message Layer.
+`streamMessage`| StreamMessage | The array representation of the `StreamMessage` to publish. Defined in the Message Layer.
 `sessionToken` | `string` | User's session token retrieved with some authentication method.
 
 #### SubscribeRequest
@@ -188,11 +189,11 @@ Field    | Type | Description
 Requests that the client be subscribed to a stream-partition. Will result in a `SubscribeResponse` message, and a stream of `BroadcastMessage` as they are published.
 
 ```
-[version, type, streamId, streamPartition, sessionToken]
+[version, type, requestId, streamId, streamPartition, sessionToken]
 ```
 Example:
 ```
-[1, 9, "stream-id", 0, "my-session-token"]
+[2, 9, "request-id", "stream-id", 0, "my-session-token"]
 ```
 
 Field    | Type | Description
@@ -206,11 +207,11 @@ Field    | Type | Description
 Unsubscribes the client from a stream-partition. The response message is `UnsubscribeResponse`.
 
 ```
-[version, type, streamId, streamPartition]
+[version, type, requestId, streamId, streamPartition]
 ```
 Example:
 ```
-[1, 10, "stream-id", 0]
+[2, 10, "request-id", "stream-id", 0]
 ```
 
 Field    | Type | Description
@@ -223,11 +224,11 @@ Field    | Type | Description
 Requests a resend of the last N messages for a stream-partition. Responses are either a sequence of `ResendResponseResending`, one or more `UnicastMessage`, and a `ResendResponseResent`; or a `ResendResponseNoResend` if there is nothing to resend.
 
 ```
-[version, type, streamId, streamPartition, requestId, numberLast, sessionToken]
+[version, type, requestId, streamId, streamPartition, numberLast, sessionToken]
 ```
 Example:
 ```
-[1, 11, "streamId", 0, "requestId", 500, "my-session-token"]
+[2, 11, "request-id", "stream-id", 0, 500, "my-session-token"]
 ```
 
 Field    | Type | Description
@@ -243,11 +244,11 @@ Field    | Type | Description
 Requests a resend, for a subscription id, of all messages of a particular publisher on a stream-partition, starting from a particular message defined by its reference. It carries a `MessageRef` payload at the Message Layer level, its array representation is described in the [MessageRef](#messageref) section. Responses are either a sequence of `ResendResponseResending`, one or more `UnicastMessage`, and a `ResendResponseResent`; or a `ResendResponseNoResend` if there is nothing to resend.
 
 ```
-[version, type, streamId, streamPartition, requestId, fromMsgRef, publisherId, sessionToken]
+[version, type, requestId, streamId, streamPartition, fromMsgRef, publisherId, sessionToken]
 ```
 Example:
 ```
-[1, 12, "streamId", 0, "requestId", [...msgRefFields], "publisherId", "my-session-token"]
+[2, 12, "request-id", "stream-id", 0, [...msgRefFields], "publisher-id", "my-session-token"]
 ```
 
 Field    | Type | Description
@@ -264,11 +265,11 @@ Field    | Type | Description
 Requests a resend, for a subscription id, of a range of messages of a particular publisher on a stream-partition between two message references. It carries two `MessageRef` payloads at the Message Layer level, described in the [MessageRef](#messageref) section. Responses are either a sequence of `ResendResponseResending`, one or more `UnicastMessage`, and a `ResendResponseResent`; or a `ResendResponseNoResend` if there is nothing to resend.
 
 ```
-[version, type, streamId, streamPartition, requestId, fromMsgRef, toMsgRef, publisherId, sessionToken]
+[version, type, requestId, streamId, streamPartition, requestId, fromMsgRef, toMsgRef, publisherId, sessionToken]
 ```
 Example:
 ```
-[1, 13, "streamId", 0, "requestId", [...fromMsgRefFields], [...toMsgRefFields], "publisherId", "my-session-token"]
+[2, 13, "request-id", "stream-id", 0, [...fromMsgRefFields], [...toMsgRefFields], "publisher-id", "my-session-token"]
 ```
 
 Field    | Type | Description
@@ -288,11 +289,11 @@ Field    | Type | Description
 A message addressed to all subscriptions listening on the stream. It contains a `StreamMessage` as a payload at the Message Layer level. The `StreamMessage` representation is also an array (nested in the `BroadcastMessage` array) which is described in the [StreamMessage](#streammessage) section.
 
 ```
-[version, type, streamMessage]
+[version, type, requestId, streamMessage]
 ```
 Example:
 ```
-[1, 0, [...streamMessageFields]]
+[2, 0, "request-id", [...streamMessageFields]]
 ```
 
 Field    | Type | Description
@@ -301,19 +302,18 @@ Field    | Type | Description
 
 #### UnicastMessage
 
-A message addressed in response to a specific request. It contains a `StreamMessage` as a payload at the Message Layer level. The `StreamMessage` representation is also an array (nested in the `UnicastMessage` array) which is described in the [StreamMessage](#streammessage) section.
+A message addressed in response to a specific resend request. It contains a `StreamMessage` as a payload at the Message Layer level. The `StreamMessage` representation is also an array (nested in the `UnicastMessage` array) which is described in the [StreamMessage](#streammessage) section.
 
 ```
 [version, type, requestId, streamMessage]
 ```
 Example:
 ```
-[1, 1, "requestId", [...streamMessageFields]]
+[2, 1, "request-id", [...streamMessageFields]]
 ```
 
 Field    | Type | Description
 -------- | ---- | --------
-`requestId` | `string` | The request id to deliver the message to. Corresponds to the request id sent in a `ResendLastRequest`, a `ResendRangeRequest` or a `ResendFromRequest`.
 `streamMessage` | StreamMessage | The array representation of the `StreamMessage` to be delivered. Defined in the Message Layer.
 
 #### SubscribeResponse
@@ -321,11 +321,11 @@ Field    | Type | Description
 Sent in response to a `SubscribeRequest`. Lets the client know that streams were subscribed to.
 
 ```
-[version, type, streamId, streamPartition]
+[version, type, requestId, streamId, streamPartition]
 ```
 Example:
 ```
-[1, 2, "stream-id", 0]
+[2, 2, "request-id", "stream-id", 0]
 ```
 
 Field    | Type | Description
@@ -338,11 +338,11 @@ Field    | Type | Description
 Sent in response to an `UnsubscribeRequest`.
 
 ```
-[version, type, streamId, streamPartition]
+[version, type, requestId, streamId, streamPartition]
 ```
 Example:
 ```
-[1, 3, "stream-id", 0]
+[2, 3, "request-id", "stream-id", 0]
 ```
 
 Field    | Type | Description
@@ -355,11 +355,11 @@ Field    | Type | Description
 Sent in response to a `ResendRequest`. Informs the client that a resend is starting.
 
 ```
-[version, type, streamId, streamPartition, requestId]
+[version, type, requestId, streamId, streamPartition]
 ```
 Example:
 ```
-[1, 4, "stream-id", 0, "requestId"]
+[2, 4, "request-id", "stream-id", 0]
 ```
 
 Field    | Type | Description
@@ -373,11 +373,11 @@ Field    | Type | Description
 Informs the client that a resend for a particular subscription is complete.
 
 ```
-[version, type, streamId, streamPartition, requestId]
+[version, type, requestId, streamId, streamPartition]
 ```
 Example:
 ```
-[1, 5, "stream-id", 0, "requestId"]
+[2, 5, "request-id", "stream-id", 0]
 ```
 
 Field    | Type | Description
@@ -391,11 +391,11 @@ Field    | Type | Description
 Sent in response to a `ResendRequest`. Informs the client that there was nothing to resend.
 
 ```
-[version, type, streamId, streamPartition, requestId]
+[version, type, requestId, streamId, streamPartition, requestId]
 ```
 Example:
 ```
-[1, 6, "stream-id", 0, "requestId"]
+[2, 6, "request-id", "stream-id", 0, "requestId"]
 ```
 
 Field    | Type | Description
@@ -409,16 +409,17 @@ Field    | Type | Description
 Sent in case of an error.
 
 ```
-[version, type, errorMessage]
+[version, type, requestId, errorMessage, errorCode]
 ```
 Example:
 ```
-[1, 7, "error-message"]
+[2, 7, "request-id", "error-message", "ERROR_CODE"]
 ```
 
 Field    | Type | Description
 -------- | ---- | --------
-`errorMessage` | `string` | Message of the error.
+`errorMessage` | `string` | Human-readable message describing the error.
+`errorCode` | `string` | Machine-readable string describing the type of error.
 
 ## Message Layer
 
