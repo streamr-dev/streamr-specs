@@ -423,18 +423,18 @@ Field    | Type | Description
 
 ## Message Layer
 
-The Message Layer contains three different types: `MessageID`, `MessageRef` and `StreamMessage`.
+The Message Layer contains three different types: `MessageID`, `MessageRef` and `StreamMessage`. This document describes message layer version `31`.
 
 ### StreamMessage
 
 Contains the data and metadata for a message produced/consumed on a stream. It is a payload at the Control Layer for the following message types: `PublishRequest`, `BroadcastMessage`, `UnicastMessage`. Where `msgId` uniquely identifies the `StreamMessage` and is the array representation of the `MessageID` defined [below](#messageid). `prevMsgRef` allows to identify the previous `StreamMessage` on the same stream and same partition published by the same producer. It is used to detect missing messages. It is the array representation of the `MessageRef` defined [below](#messageref).
 
 ```
-[version, msgId, prevMsgRef, contentType, content, signatureType, signature]
+[version, msgId, prevMsgRef, contentType, encryptionType, content, signatureType, signature]
 ```
 Example:
 ```
-[30, [...msgIdFields], [...msgRefFields], 27, "contentData", 1, "0x29c057786Fa..."]
+[31, [...msgIdFields], [...msgRefFields], 27, 0, "contentData", 1, "0x29c057786Fa..."]
 ```
 
 Field    | Type | Description
@@ -443,11 +443,14 @@ Field    | Type | Description
 `msgId` | MessageID |Array representation of the `MessageID` to uniquely identify this message. 
 `prevMsgRef` | MessageRef | Array representation of the `MessageRef` of the previous message on a message chain (defined in the `msgId`). Used to detect missing messages.
 `contentType` | `number` | Determines how the content should be parsed according to the table below.
+`encryptionType` | `number` | Encryption type as defined by the table below.
 `content` | `string` | Content data of the message.
 `signatureType` | `number` | Signature type as defined by the table below.
 `signature` | `string` | Signature of the message, signed by the producer. Encoding depends on the signature type.
 
-Content Type | Description
+#### `contentType`
+
+`contentType` | Description
 -------------- | --------
 27 | Normal JSON message. `content` can either be a JSON string to be parsed or a JSON object.
 28 | Group key request. See example of valid `content` below.
@@ -489,11 +492,22 @@ Example of valid `content` for `contentType` 30 (group key reset)
 }
 ```
 
-Signature Type | Name | Description | Signature payload fields to be concatenated in order
+#### `signatureType`
+
+`signatureType` | Name | Description | Signature payload fields to be concatenated in order
 -------------- | ---- |------------ | -----------------------
 0 | `NONE` | No signature. signature field is empty in this case. | None.
 1 | `ETH_LEGACY` | Ethereum signature produced by old clients (Message Layer version 29). The signature field is encoded as a hex string. | `streamId`, `streamPartition`, `timestamp`, `publisherId`, `content`
-2 | `ETH` | Ethereum signature produced by current clients (Message Layer version 30). The signature field is encoded as a hex string. | all the `msgId` fields, (`streamId`, `streamPartition`, `timestamp`, `sequenceNumber`, `publisherId`, `msgChainId`), `prevMsgRef`, `content`
+2 | `ETH` | Ethereum signature produced by current clients (since Message Layer version 30). The signature field is encoded as a hex string. | all the `msgId` fields, (`streamId`, `streamPartition`, `timestamp`, `sequenceNumber`, `publisherId`, `msgChainId`), `prevMsgRef`, `content`
+
+#### `encryptionType`
+
+`encryptionType` | Description
+-------------- | --------
+0 | Unencrypted, plaintext message.
+RSA | Content is asymetrically encrypted using RSA.
+AES | Content is symmetrically encrypted using AES.
+NEW_KEY_AND_AES | The content contains a concatenation of a new AES key and the content, encrypted with the old key.
 
 ### MessageID
 
