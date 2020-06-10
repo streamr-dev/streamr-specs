@@ -1,21 +1,42 @@
-# Validating SubscribeRequest and all ResendRequests
+# Table of Contents
+
+- [Control Layer](#control-layer)
+- [Message Layer](#message-layer)
+- [Key exchange streams](#key-exchange-streams)
+
+# Control Layer
+
+## PublishRequest, BroadcastMessage, and UnicastMessage
+
+Validated by validating the [`StreamMessage`](#messagelayer) contained in the message.
+
+## SubscribeRequest and ResendRequests
 
 ```
-check that the sender has stream_subscribe permission to stream
+if (stream is a key exchange stream) {
+    check that the sender's address equals the address of the requested key exchange stream
+    check that streamPartition == 0
+} else {
+    check that the sender has stream_subscribe permission to stream
+}
 ```
 
-# Validating PublishRequest
+Note: At the moment, with no handshake procedure in place yet to establish the address of the connecting client in all cases, it's not possible to implement the above exactly for [key exchange streams](#keyexchangestreams). As a workaround, we can safely let anyone subscribe to key exchange streams:
 
-Validate the `StreamMessage` contained by the `PublishRequest`, as per below.
+```
+if (stream is a key exchange stream) {
+    // TODO: enable later when clients do handshakes
+    // check that the sender's address equals the address of the requested key exchange stream
+    check that streamPartition == 0
+} else {
+    check that the sender has stream_subscribe permission to stream
+}
+```
+# Message Layer
 
-# Validating StreamMessage
+## StreamMessage
 
-The spec can be implemented by any code that needs to validate `StreamMessage`s they see, including:
-
-1) SDKs, to provide automatic validation of incoming messages to apps using the network
-2) nodes, which can validate messages to avoid propagating invalid messages to other nodes
-
-## Validating normal payloads (contentType = 27)
+### Validating normal payloads (contentType = 27)
 
 ```
 if (message is unsigned) {
@@ -26,7 +47,9 @@ if (message is unsigned) {
 }
 ```
 
-## Validating group key requests (contentType = 28)
+Note: support for unsigned messages will be dropped later.
+
+### Validating group key requests (contentType = 28)
 
 ```
 let S be the stream for which the key request is
@@ -36,7 +59,7 @@ check that the signature is correct
 check that the publisher has stream_subscribe permission to S
 ```
 
-## Validating group key responses (contentType = 29) and resets (contentType = 30)
+### Validating group key responses (contentType = 29) and resets (contentType = 30)
 
 ```
 let S be the stream for which the key response/reset is
@@ -46,7 +69,7 @@ check that the signature is correct
 check that the publisher has stream_publish permission to S
 ```
 
-## Key exchange streams
+# Key exchange streams
 
 Key exchange streams have a special id of the form
 
