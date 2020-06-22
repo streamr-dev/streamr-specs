@@ -39,6 +39,10 @@ This documentation describes the messages in each layer.
     - [StreamMessage](#streammessage)
     - [MessageID](#messageid)
     - [MessageRef](#messageref)
+    - [GroupKeyRequest](#groupkeyrequest)
+    - [GroupKeyResponse](#groupkeyresponse)
+    - [GroupKeyReset](#groupkeyreset)
+    - [GroupKeyErrorResponse](#groupkeyerrorresponse)
 
 
 ## Network Layer
@@ -455,57 +459,10 @@ Field    | Type | Description
 `contentType` | Description
 -------------- | --------
 27 | Normal message. The `content` is a string containing a valid JSON object.
-28 | Group key request. See example of valid `content` below.
-29 | Group key response. See example of valid `content` below.
-30 | Group key reset. See example of valid `content` below.
-31 | Key exchange error. Used to respond to unsuccessful requests. See example of valid `content` below.
-
-Example of valid `content` for `contentType` 28 (group key request)
-```
-{
-  "requestId": "random-string-to-pair-requests-with-responses",
-  "streamId": "id-of-stream-to-be-decrypted",
-  "publicKey": "subscriber-rsa-public-key",
-  "range": { // optional
-    "start": 342546546,
-    "end": 379080012
-  }
-}
-```
-
-Example of valid `content` for `contentType` 29 (group key response)
-```
-{
-  "requestId": "random-string-to-pair-requests-with-responses", // repeat the requestId of the request
-  "streamId": "id-of-stream-to-be-decrypted",
-  "keys": [{
-    "groupKey": "some-encrypted-group-key"
-    "start": 342546000
-  }, {
-    "groupKey": "some-later-encrypted-group-key"
-    "start": 369146000
-  }]
-}
-```
-
-Example of valid `content` for `contentType` 30 (group key reset)
-```
-{
-  "streamId": "id-of-stream-to-be-reset",
-  "groupKey": "new-encrypted-group-key"
-  "start": 9086906
-}
-```
-
-Example of valid `content` for `contentType` 31 (key exchange error)
-```
-{
-  "requestId": "random-string-to-pair-requests-with-responses", // repeat the requestId of the request
-  "streamId": "id-of-stream-for-which-a-key-was-requested",
-  "code": "ERROR_CODE",
-  "message": "Example error message"
-}
-```
+28 | [GroupKeyRequest](#groupkeyrequest)
+29 | [GroupKeyResponse](#groupkeyresponse)
+30 | [GroupKeyReset](#groupkeyreset)
+31 | [GroupKeyErrorResponse](#groupkeyerrorresponse)
 
 #### `signatureType`
 
@@ -561,3 +518,58 @@ Field    | Type | Description
 -------- | ---- | --------
 `timestamp` | `number` | Timestamp of the `StreamMessage` published on the same stream and same partition by the same producer.
 `sequenceNumber` | `number` | Sequence Number of the `StreamMessage`.
+
+### GroupKeyRequest
+
+Example of valid `content` for `contentType` 28:
+```
+{
+  "requestId": "random-string-to-pair-requests-with-responses",
+  "streamId": "id-of-stream-to-be-decrypted",
+  "publicKey": "subscriber-rsa-public-key",
+  "range": { // optional
+    "start": 342546546,
+    "end": 379080012
+  }
+}
+```
+
+### GroupKeyResponse
+
+Example of valid `content` for `contentType` 29:
+```
+{
+  "requestId": "random-string-to-pair-requests-with-responses", // repeat the requestId of the request
+  "streamId": "id-of-stream-to-be-decrypted",
+  "keys": [{
+    "groupKey": "some-encrypted-group-key"
+    "start": 342546000
+  }, {
+    "groupKey": "some-later-encrypted-group-key"
+    "start": 369146000
+  }]
+}
+```
+
+### GroupKeyReset
+
+Example of valid `content` for `contentType` 30:
+```
+{
+  "streamId": "id-of-stream-to-be-reset",
+  "groupKey": "new-encrypted-group-key"
+  "start": 9086906
+}
+```
+
+### GroupKeyErrorResponse
+
+Example of valid `content` for `contentType` 31:
+```
+{
+  "requestId": "random-string-to-pair-requests-with-responses", // repeat the requestId of the request
+  "streamId": "id-of-stream-for-which-a-key-was-requested",
+  "code": "ERROR_CODE",
+  "message": "Example error message"
+}
+```
