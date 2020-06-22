@@ -458,11 +458,12 @@ Field    | Type | Description
 28 | Group key request. See example of valid `content` below.
 29 | Group key response. See example of valid `content` below.
 30 | Group key reset. See example of valid `content` below.
-31 | Key exchange error. See example of valid `content` below.
+31 | Key exchange error. Used to respond to unsuccessful requests. See example of valid `content` below.
 
 Example of valid `content` for `contentType` 28 (group key request)
 ```
 {
+  "requestId": "random-string-to-pair-requests-with-responses",
   "streamId": "id-of-stream-to-be-decrypted",
   "publicKey": "subscriber-rsa-public-key",
   "range": { // optional
@@ -475,6 +476,7 @@ Example of valid `content` for `contentType` 28 (group key request)
 Example of valid `content` for `contentType` 29 (group key response)
 ```
 {
+  "requestId": "random-string-to-pair-requests-with-responses", // repeat the requestId of the request
   "streamId": "id-of-stream-to-be-decrypted",
   "keys": [{
     "groupKey": "some-encrypted-group-key"
@@ -498,6 +500,8 @@ Example of valid `content` for `contentType` 30 (group key reset)
 Example of valid `content` for `contentType` 31 (key exchange error)
 ```
 {
+  "requestId": "random-string-to-pair-requests-with-responses", // repeat the requestId of the request
+  "streamId": "id-of-stream-for-which-a-key-was-requested",
   "code": "ERROR_CODE",
   "message": "Example error message"
 }
