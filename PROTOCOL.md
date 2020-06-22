@@ -454,10 +454,11 @@ Field    | Type | Description
 
 `contentType` | Description
 -------------- | --------
-27 | Normal JSON message. `content` can either be a JSON string to be parsed or a JSON object.
+27 | Normal message. The `content` is a string containing a valid JSON object.
 28 | Group key request. See example of valid `content` below.
 29 | Group key response. See example of valid `content` below.
 30 | Group key reset. See example of valid `content` below.
+31 | Key exchange error. See example of valid `content` below.
 
 Example of valid `content` for `contentType` 28 (group key request)
 ```
@@ -491,6 +492,14 @@ Example of valid `content` for `contentType` 30 (group key reset)
   "streamId": "id-of-stream-to-be-reset",
   "groupKey": "new-encrypted-group-key"
   "start": 9086906
+}
+```
+
+Example of valid `content` for `contentType` 31 (key exchange error)
+```
+{
+  "code": "ERROR_CODE",
+  "message": "Example error message"
 }
 ```
 
