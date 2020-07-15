@@ -515,7 +515,9 @@ Example (encrypted JSON message):
 
 ### GroupKeyRequest
 
-Sent by a subscriber to the publisher's key exchange stream in order to request a missing symmetric encryption key from the publisher. The protocol implementation should send this message when it encounters a message encrypted with a key that the subscriber doesn't have. The publisher should handle this message and respond with a `GroupKeyResponse` or `GroupKeyErrorResponse`. 
+Sent by a subscriber to the publisher's key exchange stream in order to request a missing symmetric encryption key from the publisher. The protocol implementation should send this message when it encounters a message encrypted with a key that the subscriber doesn't have. The publisher should handle this message and respond with a `GroupKeyResponse` for successfully retrieved keys (if any) and a `GroupKeyErrorResponse` for keys that could not be recovered (if any).
+
+Note that the publisher may have multiple instances connected to the network under the same `publisherId`. All of those instances will receive the `GroupKeyRequest` and respond individually, meaning that the requestor may subsequently receive many `GroupKeyResponse`s and `GroupKeyErrorResponse`s. The implementation should be prepared for receiving many responses for a `GroupKeyRequest`.
 
 `GroupKeyRequest`s must be unencrypted (`encryptionType 0`). They contain no secrets. 
 
@@ -540,7 +542,7 @@ Example of a `GroupKeyRequest` including the rest of the `Stream Layer` fields:
 
 ### GroupKeyResponse
 
-Sent by a publisher as a response to a `GroupKeyRequest` to the requestor's key exchange stream. The requestor should handle this message by adding the contained keys to their key storage, and re-attempting to decrypt any messages that previously could not be decrypted due to missing the keys. 
+Sent by a publisher as a success response to a `GroupKeyRequest`. The response is sent to the requestor's key exchange stream. The requestor should handle this message by adding the contained keys to their key storage, and re-attempting to decrypt any messages that previously could not be decrypted due to missing the keys. 
 
 `GroupKeyResponse`s must be encrypted with (`encryptionType 1 (RSA)`) for the `rsaPublicKey` provided in the `GroupKeyRequest`. 
 
@@ -590,7 +592,7 @@ Example of a `GroupKeyReset` including the rest of the `Stream Layer` fields:
 
 ### GroupKeyErrorResponse
 
-In case there's an error processing a `GroupKeyRequest`, this message gets sent by a publisher to the requestor's key exchange stream. 
+In case there's an error processing a `GroupKeyRequest`, this message gets sent by a publisher to the requestor's key exchange stream. The message contains the keys that could not be retrieved, and an explanation why.
 
 `GroupKeyErrorResponse`s are always unencrypted (`encryptionType 0`). The `content` encoded as `contentType 0` (JSON) is as follows:
 
