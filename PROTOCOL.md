@@ -473,7 +473,9 @@ The various type fields have the following possible values:
 
 #### `contentType`
 
-Describes how the content (post-decryption in case it's encrypted) should be parsed.
+Describes how the `content` should be parsed. 
+
+Note that encrypted `content` is always a hex-encoded binary string. Once decrypted, the `content` should be interpreted based on `contentType`.
 
 `contentType` | Description
 ------------- | -----------
@@ -482,8 +484,6 @@ Describes how the content (post-decryption in case it's encrypted) should be par
 Other content types, including binary types, will be defined in the future.
 
 #### `encryptionType`
-
-For each non-zero `encryptionType`, the `contentType` is a hex-encoded string.
 
 `encryptionType` | Description
 -------------- | --------
