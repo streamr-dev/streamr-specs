@@ -505,12 +505,12 @@ Contains an arbitrary, application-specific `content` payload, i.e. the `content
 
 Example (unencrypted JSON message):
 ```
-[32, [...msgIdFields], [...msgRefFields], 27, 0, 0, "{\"content\":42}", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 27, 0, 0, "{\"foo\":42}", 2, "0x29c057786Fa..."]
 ```
 
-Example (encrypted JSON message):
+Example (AES-encrypted JSON message):
 ```
-[32, [...msgIdFields], [...msgRefFields], 27, 0, 0, "{\"content\":42}", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 27, 0, 2, "9abef2710b", 2, "0x29c057786Fa..."]
 ```
 
 ### GroupKeyRequest
