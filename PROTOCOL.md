@@ -1,8 +1,12 @@
-# Protocol
+# Streamr Protocol
 
 ## Data Types
 
-Our protocol is a JSON protocol. This means that we have the following types at our disposal: `string`, `number`, `object`, `array`, `boolean` and `null`. In the following, all `number` are positive integers or zero.
+The Streamr Protocol is a JSON protocol. This means that we have the following types at our disposal: `string`, `number`, `object`, `array`, `boolean` and `null`. In the following, all `number` are positive integers or zero.
+
+## Encoding
+
+The JSON messages are UTF8 encoded when transported under an underlying binary protocol (which from the perspective of the message definitions is undefined, but in practice the network uses websocket and in the future WebRTC).  
 
 ## Layers
 
