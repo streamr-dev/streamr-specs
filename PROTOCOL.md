@@ -453,7 +453,7 @@ All Stream Layer messages have the following structure:
  `messageType`| `number`  | Determines how the message should be handled. See the table below.
  `contentType`| `number`  | Determines how the (decrypted) content field should be parsed. For a list of possible values, see the table below.
  `encryptionType`| `number` | Encryption type as defined by the table below.
- `groupKeyId`| `string` | Identifies the key used by the publisher to encrypt the message content. For AES encryption, the `groupKeyId` is a unique identifier chosen by the publisher. For RSA encryption, it contains the public key of the intended recipient. The field is `null` if the message is not encrypted.
+ `groupKeyId`| `string` | Identifies the AES key used by the publisher to encrypt the message content. For AES encryption, the `groupKeyId` is a unique identifier chosen by the publisher. If the message is RSA encrypted (used in key exchange), this field contains the public key of the intended recipient. The field is `null` if the message is not encrypted.
  `content` | `string` | Content data of the message. Depends on the `messageType` how the content should be handled.
  `signatureType` | `number` | Signature type as defined by the table below.
  `signature` | `string` | Signature of the message, signed by the producer. Encoding depends on the signature type.
@@ -489,7 +489,7 @@ Other content types, including binary types, will be defined in the future.
 -------------- | --------
 0 | Unencrypted, plaintext message.
 1 | Content is asymmetrically encrypted using RSA. When using RSA, the `groupKeyId` is set to the public key of the recipient. 
-2 | Content is symmetrically encrypted using AES. When using AES, the `groupKeyId` is set to a unique value chosen by the publisher.
+2 | Content is symmetrically encrypted using AES. When using AES, the `groupKeyId` is set to a unique value chosen by the publisher, used to identify that particular key.
 
 #### `signatureType`
 
