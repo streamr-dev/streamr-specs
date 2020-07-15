@@ -453,7 +453,7 @@ All Stream Layer messages have the following structure:
  `messageType`| `number`  | Determines how the message should be handled. See the table below.
  `contentType`| `number`  | Determines how the (decrypted) content field should be parsed. For a list of possible values, see the table below.
  `encryptionType`| `number` | Encryption type as defined by the table below.
- `groupKeyId`| `string` | Identifies the symmetric (AES) key used by the publisher to encrypt the message content. `null` if the message is not AES encrypted.
+ `groupKeyId`| `string` | Identifies the key used by the publisher to encrypt the message content. For AES encryption, the `groupKeyId` is a unique identifier chosen by the publisher. For RSA encryption, it contains the public key of the intended recipient. The field is `null` if the message is not encrypted.
  `content` | `string` | Content data of the message. Depends on the `messageType` how the content should be handled.
  `signatureType` | `number` | Signature type as defined by the table below.
  `signature` | `string` | Signature of the message, signed by the producer. Encoding depends on the signature type.
@@ -488,8 +488,8 @@ Other content types, including binary types, will be defined in the future.
 `encryptionType` | Description
 -------------- | --------
 0 | Unencrypted, plaintext message.
-1 | Content is asymetrically encrypted using RSA.
-2 | Content is symmetrically encrypted using AES. The `groupKeyId` identifies the key used.
+1 | Content is asymmetrically encrypted using RSA. When using RSA, the `groupKeyId` is set to the public key of the recipient. 
+2 | Content is symmetrically encrypted using AES. When using AES, the `groupKeyId` is set to a unique value chosen by the publisher.
 
 #### `signatureType`
 
@@ -544,7 +544,7 @@ Example of a `GroupKeyRequest` including the rest of the `Stream Layer` fields:
 
 Sent by a publisher as a success response to a `GroupKeyRequest`. The response is sent to the requestor's key exchange stream. The requestor should handle this message by adding the contained keys to their key storage, and re-attempting to decrypt any messages that previously could not be decrypted due to missing the keys. 
 
-`GroupKeyResponse`s must be encrypted with (`encryptionType 1 (RSA)`) for the `rsaPublicKey` provided in the `GroupKeyRequest`. 
+`GroupKeyResponse`s must be encrypted with (`encryptionType 1 (RSA)`) for the `rsaPublicKey` provided in the `GroupKeyRequest`. The `groupKeyId` should equal the `rsaPublicKey` to help the recipient identify the correct key pair.
 
 The `content` encoded as `contentType 0` (JSON) is as follows:
 
@@ -561,15 +561,14 @@ The `content` encoded as `contentType 0` (JSON) is as follows:
 Example of a `GroupKeyResponse` including the rest of the `Stream Layer` fields (`content` shown in plaintext here):
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 29, 0, 1, null, ["requestId", "streamId", ["keyId","123abc"]], 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 29, 0, 1, "rsaPublicKey-from-the-request", ["requestId", "streamId", ["keyId","123abc"]], 2, "0x29c057786Fa..."]
 ```
 
 Once RSA-encrypted, the message will be:
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 29, 0, 1, null, "hex-encoded-encrypted-bytes", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 29, 0, 1, "rsaPublicKey-from-the-request", "hex-encoded-encrypted-bytes", 2, "0x29c057786Fa..."]
 ```
-
 
 ### GroupKeyReset
 
@@ -594,13 +593,13 @@ The `content` encoded as `contentType 0` (JSON) is as follows:
 Example of a `GroupKeyReset` including the rest of the `Stream Layer` fields (`content` shown in plaintext here):
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 30, 0, 1, null, ["keyId", "123abc"], 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 30, 0, 1, "rsaPublicKey-of-recipient", ["keyId", "123abc"], 2, "0x29c057786Fa..."]
 ```
 
 Once RSA-encrypted, the message will be:
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 30, 0, 1, null, "hex-encoded-encrypted-bytes", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 30, 0, 1, "rsaPublicKey-of-recipient", "hex-encoded-encrypted-bytes", 2, "0x29c057786Fa..."]
 ```
 
 ### GroupKeyErrorResponse
