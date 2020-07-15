@@ -442,7 +442,7 @@ It's worth noting that the following Control Layer messages contain a Stream Lay
 All Stream Layer messages have the following structure:
 
  ```
- [version, msgId, prevMsgRef, messageType, contentType, encryptionType, encryptionKeyId, content, signatureType, signature]
+ [version, msgId, prevMsgRef, messageType, contentType, encryptionType, groupKeyId, content, signatureType, signature]
  ```
  
  Field        | Type      | Description
@@ -505,12 +505,12 @@ Contains an arbitrary, application-specific `content` payload, i.e. the `content
 
 Example (unencrypted JSON message):
 ```
-[32, [...msgIdFields], [...msgRefFields], 27, 0, 0, "{\"foo\":42}", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 27, 0, 0, null, "{\"foo\":42}", 2, "0x29c057786Fa..."]
 ```
 
 Example (AES-encrypted JSON message):
 ```
-[32, [...msgIdFields], [...msgRefFields], 27, 0, 2, "9abef2710b", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 27, 0, 2, "groupKeyId", "9abef2710b", 2, "0x29c057786Fa..."]
 ```
 
 ### GroupKeyRequest
@@ -537,7 +537,7 @@ The `content` encoded as `contentType 0` (JSON) is as follows:
 Example of a `GroupKeyRequest` including the rest of the `Stream Layer` fields:
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 28, 0, 0, ["requestId", "streamId", "rsaPublicKey", ["keyId"]], 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 28, 0, 0, null, ["requestId", "streamId", "rsaPublicKey", ["keyId"]], 2, "0x29c057786Fa..."]
 ```
 
 ### GroupKeyResponse
@@ -558,11 +558,18 @@ The `content` encoded as `contentType 0` (JSON) is as follows:
  `streamId`   | `string`  | The stream for which a key is being delivered.
  `groupKeys`  | `array`   | Array of `[groupKeyId, encryptedGroupKey]` pairs, containing the requested keys encrypted with RSA for the public key provided in the `GroupKeyRequest`. The `encryptedGroupKey` is a hex-encoded binary string.
  
-Example of a `GroupKeyResponse` including the rest of the `Stream Layer` fields:
+Example of a `GroupKeyResponse` including the rest of the `Stream Layer` fields (`content` shown in plaintext here):
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 29, 0, 0, ["requestId", "streamId", ["keyId","123abc"]], 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 29, 0, 1, null, ["requestId", "streamId", ["keyId","123abc"]], 2, "0x29c057786Fa..."]
 ```
+
+Once RSA-encrypted, the message will be:
+
+```
+[32, [...msgIdFields], [...msgRefFields], 29, 0, 1, null, "hex-encoded-encrypted-bytes", 2, "0x29c057786Fa..."]
+```
+
 
 ### GroupKeyReset
 
@@ -584,10 +591,16 @@ The `content` encoded as `contentType 0` (JSON) is as follows:
  `groupKeyId` | `string`  | The id of the `groupKey`.
  `groupKey`   | `string`  | The group key as a hex-encoded binary string.
  
-Example of a `GroupKeyReset` including the rest of the `Stream Layer` fields:
+Example of a `GroupKeyReset` including the rest of the `Stream Layer` fields (`content` shown in plaintext here):
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 30, 0, 0, ["keyId", "123abc"], 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 30, 0, 1, null, ["keyId", "123abc"], 2, "0x29c057786Fa..."]
+```
+
+Once RSA-encrypted, the message will be:
+
+```
+[32, [...msgIdFields], [...msgRefFields], 30, 0, 1, null, "hex-encoded-encrypted-bytes", 2, "0x29c057786Fa..."]
 ```
 
 ### GroupKeyErrorResponse
@@ -617,7 +630,7 @@ The error response contains the list of keys for which the exchange failed, and 
 Example of a `GroupKeyErrorResponse` including the rest of the `Stream Layer` fields:
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 31, 0, 0, ["requestId", "streamId", "ERROR_CODE", "Error message", ["groupKeyId1"]], 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 31, 0, 0, null, ["requestId", "streamId", "ERROR_CODE", "Error message", ["groupKeyId1"]], 2, "0x29c057786Fa..."]
 ```
 
 ### GroupKeyRotate
@@ -637,10 +650,16 @@ The `content` encoded as `contentType 0` (JSON) is as follows:
  `groupKeyId` | `string`  | The id of the `groupKey`.
  `groupKey`   | `string`  | The group key as a hex-encoded binary string.
  
-Example of a decrypted `GroupKeyRotate` including the rest of the `Stream Layer` fields:
+Example of a decrypted `GroupKeyRotate` including the rest of the `Stream Layer` fields (`content` shown in plaintext here):
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 32, 0, 0, ["keyId", "123abc], 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 32, 0, 2, "previousGroupKeyId", ["newKeyId", "123abc"], 2, "0x29c057786Fa..."]
+```
+
+Once AES-encrypted, the message will be:
+
+```
+[32, [...msgIdFields], [...msgRefFields], 32, 0, 2, "previousGroupKeyId", "hex-encoded-encrypted-bytes", 2, "0x29c057786Fa..."]
 ```
 
 ### MessageID
