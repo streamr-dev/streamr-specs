@@ -595,20 +595,21 @@ In case there's an error processing a `GroupKeyRequest`, this message gets sent 
 `GroupKeyErrorResponse`s are always unencrypted (`encryptionType 0`). The `content` encoded as `contentType 0` (JSON) is as follows:
 
 ```
-[requestId, streamId, errorCode, errorMessage]
+[requestId, streamId, errorCode, errorMessage, [groupKeyIds]]
 ```
 
  Field        | Type      | Description
  ------------ | --------- | -----------
  `requestId`  | `string`  | The `requestId` of the `GroupKeyRequest`, identifying which request is being responded to.
  `streamId`   | `string`  | The stream for which a key is being delivered.
- `errorCode`  | `string`  | An error code to help the subscriber categorize the error
- `errorMessage`| `string` | An error message intended for a human, explaining what went wrong
+ `errorCode`  | `string`  | An error code to help the subscriber categorize the error.
+ `errorMessage`| `string` | An error message intended for a human, explaining what went wrong.
+ `groupKeyIds`| `array`   | An array of strings containing the `groupKeyIds` that were requested but could not be retrieved due to the error.
  
 Example of a `GroupKeyErrorResponse` including the rest of the `Stream Layer` fields:
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 31, 0, 0, ["requestId", "streamId", "ERROR_CODE", "Error message"], 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 31, 0, 0, ["requestId", "streamId", "ERROR_CODE", "Error message", ["groupKeyId1"]], 2, "0x29c057786Fa..."]
 ```
 
 ### GroupKeyRotate
