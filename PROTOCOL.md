@@ -517,7 +517,9 @@ Example (encrypted JSON message):
 
 Sent by a subscriber to the publisher's key exchange stream in order to request a missing symmetric encryption key from the publisher. The protocol implementation should send this message when it encounters a message encrypted with a key that the subscriber doesn't have. The publisher should handle this message and respond with a `GroupKeyResponse` or `GroupKeyErrorResponse`. 
 
-`GroupKeyRequest`s are always unencrypted (`encryptionType 0`). The `content` encoded as `contentType 0` (JSON) is as follows:
+`GroupKeyRequest`s must be unencrypted (`encryptionType 0`). They contain no secrets. 
+
+The `content` encoded as `contentType 0` (JSON) is as follows:
 
 ```
 [requestId, streamId, rsaPublicKey, [groupKeyIds]]
@@ -540,7 +542,9 @@ Example of a `GroupKeyRequest` including the rest of the `Stream Layer` fields:
 
 Sent by a publisher as a response to a `GroupKeyRequest` to the requestor's key exchange stream. The requestor should handle this message by adding the contained keys to their key storage, and re-attempting to decrypt any messages that previously could not be decrypted due to missing the keys. 
 
-`GroupKeyResponse`s are always encrypted with (`encryptionType 1 (RSA)`) for the `rsaPublicKey` provided in the `GroupKeyRequest`. The `content` encoded as `contentType 0` (JSON) is as follows: encoded as `contentType 0` (JSON) is as follows:
+`GroupKeyResponse`s must be encrypted with (`encryptionType 1 (RSA)`) for the `rsaPublicKey` provided in the `GroupKeyRequest`. 
+
+The `content` encoded as `contentType 0` (JSON) is as follows:
 
 ```
 [requestId, streamId, [groupKeys]]
@@ -564,7 +568,9 @@ Sent by publishers to each subscribers' key exchange streams whenever they want 
 
 The requestor should handle this message by adding the contained keys to their key storage.
 
-`GroupKeyReset`s are encrypted with (`encryptionType 1 (RSA)`) and are sent to subscribers whose `rsaPublicKey` is known by the publisher (due to receiving a `GroupKeyRequest` earlier, for example. The `content` encoded as `contentType 0` (JSON) is as follows:
+`GroupKeyReset`s must be encrypted with (`encryptionType 1 (RSA)`) and publishers should send them to subscribers whose `rsaPublicKey` they are aware of (due to receiving a `GroupKeyRequest` earlier, for example. 
+
+The `content` encoded as `contentType 0` (JSON) is as follows:
 
 ```
 [streamId, groupKeyId, groupKey]
@@ -609,7 +615,9 @@ Example of a `GroupKeyErrorResponse` including the rest of the `Stream Layer` fi
 
 This message is sent by publishers to rotate the encryption key and deliver it to existing subscribers (for forward secrecy). Subscribers should add the contained key into their key storage. The message is encrypted with another (previous) key. Publishers usually send this message to inform subscribers of a new key in advance, so that they every subscriber doesn't need to send a `GroupKeyRequest` to the publisher when they encounter the first `StreamMessage` encrypted with the new key.
 
-`GroupKeyRotate`s are always encrypted (`encryptionType 2 (AES)`) with a previous key. The `content` encoded as `contentType 0` (JSON) is as follows:
+`GroupKeyRotate`s must be encrypted (`encryptionType 2 (AES)`), and the immediately preceding key should be used to encrypt it. This allows subscribers who have the preceding key to decrypt and start using the new key. 
+
+The `content` encoded as `contentType 0` (JSON) is as follows:
 
 ```
 [groupKeyId, groupKey]
