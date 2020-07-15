@@ -453,7 +453,7 @@ All Stream Layer messages have the following structure:
  `messageType`| `number`  | Determines how the message should be handled. See the table below.
  `contentType`| `number`  | Determines how the (decrypted) content field should be parsed. For a list of possible values, see the table below.
  `encryptionType`| `number` | Encryption type as defined by the table below.
- `groupKeyId`| `string` | Identifies the symmetric key used by the publisher to encrypt the message content. `null` if the message is unencrypted.
+ `groupKeyId`| `string` | Identifies the symmetric (AES) key used by the publisher to encrypt the message content. `null` if the message is not AES encrypted.
  `content` | `string` | Content data of the message. Depends on the `messageType` how the content should be handled.
  `signatureType` | `number` | Signature type as defined by the table below.
  `signature` | `string` | Signature of the message, signed by the producer. Encoding depends on the signature type.
@@ -489,7 +489,7 @@ Other content types, including binary types, will be defined in the future.
 -------------- | --------
 0 | Unencrypted, plaintext message.
 1 | Content is asymetrically encrypted using RSA.
-2 | Content is symmetrically encrypted using AES.
+2 | Content is symmetrically encrypted using AES. The `groupKeyId` identifies the key used.
 
 #### `signatureType`
 
