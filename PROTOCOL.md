@@ -592,7 +592,13 @@ Example of a `GroupKeyReset` including the rest of the `Stream Layer` fields:
 
 ### GroupKeyErrorResponse
 
-In case there's an error processing a `GroupKeyRequest`, this message gets sent by a publisher to the requestor's key exchange stream. The message contains the keys that could not be retrieved, and an explanation why.
+In case there's a problem retrieving the keys requested via a `GroupKeyRequest`, this message gets sent by a publisher to the requestor's key exchange stream. Such error situations might include, for example:
+
+- The requested key might not be found in the publisher's key store
+- The requestor no longer has permissions to access the stream
+- The request was incorrectly formed 
+
+The error response contains the list of keys for which the exchange failed, and an explanation why.
 
 `GroupKeyErrorResponse`s are always unencrypted (`encryptionType 0`). The `content` encoded as `contentType 0` (JSON) is as follows:
 
