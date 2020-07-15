@@ -658,7 +658,7 @@ Field    | Type | Description
 
 ### MessageRef
 
-Used inside a Stream Layer message to identify the previous message on the same `msgChainId` (defined above). If the `MessageRef` is not provided by the publisher, then the stream will have weaker deliver guarantees, as subscribers will not be able to detect missing messages and request gapfills.
+Used inside a Stream Layer message to identify the previous message on the same `msgChainId` (defined above). If the `MessageRef` is not provided by the publisher, then the stream will have weaker delivery guarantees, as subscribers will not be able to detect missing messages and request gapfills.
 
 ```
 [timestamp, sequenceNumber]
