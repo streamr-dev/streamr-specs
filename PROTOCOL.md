@@ -1,15 +1,19 @@
-# Protocol
+# Streamr Protocol
 
 ## Data Types
 
-Our protocol is a JSON protocol. This means that we have the following types at our disposal: `string`, `number`, `object`, `array`, `boolean` and `null`. In the following, all `number` are positive integers or zero.
+The Streamr Protocol is a JSON protocol. This means that we have the following types at our disposal: `string`, `number`, `object`, `array`, `boolean` and `null`. In the following, all `number` are positive integers or zero.
+
+## Encoding
+
+The JSON messages are UTF8 encoded when transported under an underlying binary protocol (which from the perspective of the message definitions is undefined, but in practice the network uses websocket and in the future WebRTC).  
 
 ## Layers
 
 The Streamr Protocol is made of three layers:
 - **Network Layer:** Responsible for end-to-end unicast/multicast/broadcast communication primitives in the peer-to-peer network. Encapsulates messages from the Control Layer and defines other messages specific to communication between nodes that clients shouldn't be concerned with.
 - **Control Layer:** Defines the control messages allowing communication entities to publish, subscribe, resend, etc... These messages are encapsulated by the Network Layer.
-- **Message Layer:** Some messages in the Control Layer carry messages published in streams. The Message Layer defines the format of these message payloads, consisting of data and metadata of the messages.
+- **Stream Layer:** Messages published to streams. The Stream Layer defines the format of these message payloads, consisting of data and metadata of the messages. Note that some messages in the Control Layer wrap Stream Layer messages. 
 
 This documentation describes the messages in each layer.
 
@@ -35,7 +39,7 @@ This documentation describes the messages in each layer.
     - [ResendResponseResent](#resendresponseresent)
     - [ResendResponseNoResend](#resendresponsenoresend)
     - [ErrorResponse](#errorresponse)
-- [Message Layer](#message-layer)
+- [Stream Layer](#stream-layer)
     - [StreamMessage](#streammessage)
     - [MessageID](#messageid)
     - [MessageRef](#messageref)
@@ -157,7 +161,7 @@ Field       | Type      | Description
 
 The `...typeSpecificFields` means that there are additional fields depending on message type. The possible message `type`s are:
 
-messageType | Description
+type | Description
 ----------- | -----------
 0 | BroadcastMessage
 1 | UnicastMessage
@@ -180,19 +184,19 @@ The individual types are described in the remainder of this section. We start by
 
 #### PublishRequest
 
-Publishes a new message to a stream. Requires a write permission to the stream. Authentication requires the session token to be set. It contains a `StreamMessage` as a payload at the Message Layer level. The `StreamMessage` representation is also an array (nested in the `PublishRequest` array) which is described in the [StreamMessage](#streammessage) section.
+Publishes a new message to a stream. Requires a write permission to the stream. Authentication requires the session token to be set. It contains a [Stream Layer](#stream-layer) message as a payload.
 
 ```
-[version, type, requestId, streamMessage, sessionToken]
+[version, type, requestId, streamLayerMessage, sessionToken]
 ```
 Example:
 ```
-[2, 8, "request-id", [...streamMessageFields], "my-session-token"]
+[2, 8, "request-id", [...streamMessage], "my-session-token"]
 ```
 
 Field    | Type | Description
 -------- | ---- | --------
-`streamMessage`| StreamMessage | The array representation of the `StreamMessage` to publish. Defined in the Message Layer.
+`streamLayerMessage`| `array` | The [Stream Layer](#stream-layer) message to publish.
 `sessionToken` | `string` | User's session token retrieved with some authentication method.
 
 #### SubscribeRequest
@@ -251,7 +255,7 @@ Field    | Type | Description
 
 #### ResendFromRequest
 
-Requests a resend, for a subscription id, of all messages of a particular publisher on a stream-partition, starting from a particular message defined by its reference. It carries a `MessageRef` payload at the Message Layer level, its array representation is described in the [MessageRef](#messageref) section. Responses are either a sequence of `ResendResponseResending`, one or more `UnicastMessage`, and a `ResendResponseResent`; or a `ResendResponseNoResend` if there is nothing to resend.
+Requests a resend, for a subscription id, of all messages of a particular publisher on a stream-partition, starting from a particular message defined by its reference. It carries a [`MessageRef`](#messageref) to define the starting point for the resend. Responses are either a sequence of `ResendResponseResending`, one or more `UnicastMessage`, and a `ResendResponseResent`; or a `ResendResponseNoResend` if there is nothing to resend.
 
 ```
 [version, type, requestId, streamId, streamPartition, fromMsgRef, publisherId, sessionToken]
@@ -265,13 +269,13 @@ Field    | Type | Description
 -------- | ---- | --------
 `streamId` | `string` | Stream id of the messages to resend.
 `streamPartition` | `number` | Partition id of the messages to resend. Optional, defaults to 0.
-`msgRef` | MessageRef | The array representation of the `MessageRef` to resend from. Defined in the Message Layer.
+`msgRef` | MessageRef | The array representation of the `MessageRef` to resend from. Defined in the Stream Layer.
 `publisherId` | `string` | The publisher id of the messages to resend. Can be `null` to resend the messages of all publishers.
 `sessionToken` | `string` | User's session token retrieved with some authentication method. Not required for public streams.
 
 #### ResendRangeRequest
 
-Requests a resend, for a subscription id, of a range of messages of a particular publisher on a stream-partition between two message references. It carries two `MessageRef` payloads at the Message Layer level, described in the [MessageRef](#messageref) section. Responses are either a sequence of `ResendResponseResending`, one or more `UnicastMessage`, and a `ResendResponseResent`; or a `ResendResponseNoResend` if there is nothing to resend.
+Requests a resend, for a subscription id, of a range of messages of a particular publisher on a stream-partition between two message references. It carries two [MessageRef](#messageref)s to identify the start and end messages. Responses are either a sequence of `ResendResponseResending`, one or more `UnicastMessage`, and a `ResendResponseResent`; or a `ResendResponseNoResend` if there is nothing to resend.
 
 ```
 [version, type, requestId, streamId, streamPartition, fromMsgRef, toMsgRef, publisherId, msgChainId, sessionToken]
@@ -285,8 +289,8 @@ Field    | Type | Description
 -------- | ---- | --------
 `streamId` | `string` | Stream id of the messages to resend.
 `streamPartition` | `number` | Partition id of the messages to resend. Optional, defaults to 0.
-`fromMsgRef` | MessageRef | The array representation of the `MessageRef` of the first message to resend. Defined in the Message Layer.
-`toMsgRef` | MessageRef | The array representation of the `MessageRef` of the last message to resend. Defined in the Message Layer.
+`fromMsgRef` | MessageRef | The array representation of the `MessageRef` of the first message to resend. Defined in the Stream Layer.
+`toMsgRef` | MessageRef | The array representation of the `MessageRef` of the last message to resend. Defined in the Stream Layer.
 `publisherId` | `string` | Optional. Set both `publisherId` and `msgChainId` to resend only messages in a particular message chain. Set to `null` to resend messages for all publishers. 
 `msgChainId` | `string` | Optional. Set both `publisherId` and `msgChainId` to resend only messages in a particular message chain. Set to `null` to resend messages for all publishers.
 `sessionToken` | `string` | User's session token retrieved with some authentication method. Not required for public streams.
@@ -295,35 +299,35 @@ Field    | Type | Description
 
 #### BroadcastMessage
 
-A message addressed to all subscriptions listening on the stream. It contains a `StreamMessage` as a payload at the Message Layer level. The `StreamMessage` representation is also an array (nested in the `BroadcastMessage` array) which is described in the [StreamMessage](#streammessage) section.
+A message addressed to all subscriptions listening on the stream. It wraps a [Stream Layer](#stream-layer) message to be consumed by subscribers.
 
 ```
-[version, type, requestId, streamMessage]
+[version, type, requestId, streamLayerMessage]
 ```
 Example:
 ```
-[2, 0, "request-id", [...streamMessageFields]]
+[2, 0, "request-id", [...streamMessage]]
 ```
 
 Field    | Type | Description
 -------- | ---- | --------
-`streamMessage` | StreamMessage | The array representation of the `StreamMessage` to be broadcast. Defined in the Message Layer.
+`streamLayerMessage` | `array` | The [Stream Layer](#stream-layer) message being broadcasted.
 
 #### UnicastMessage
 
-A message addressed in response to a specific resend request. It contains a `StreamMessage` as a payload at the Message Layer level. The `StreamMessage` representation is also an array (nested in the `UnicastMessage` array) which is described in the [StreamMessage](#streammessage) section.
+A message addressed in response to a specific resend request. It wraps a [Stream Layer](#stream-layer) message to be consumed by the subscriber.
 
 ```
-[version, type, requestId, streamMessage]
+[version, type, requestId, streamLayerMessage]
 ```
 Example:
 ```
-[2, 1, "request-id", [...streamMessageFields]]
+[2, 1, "request-id", [...streamMessage]]
 ```
 
 Field    | Type | Description
 -------- | ---- | --------
-`streamMessage` | StreamMessage | The array representation of the `StreamMessage` to be delivered. Defined in the Message Layer.
+`streamLayerMessage` | `array` | The [Stream Layer](#stream-layer) message being unicasted.
 
 #### SubscribeResponse
 
@@ -427,63 +431,239 @@ Field    | Type | Description
 `errorMessage` | `string` | Human-readable message describing the error.
 `errorCode` | `string` | Machine-readable string describing the type of error.
 
-## Message Layer
+## Stream Layer
 
-The Message Layer contains three different types: `MessageID`, `MessageRef` and `StreamMessage`. This document describes message layer version `31`.
+This document describes Stream Layer version `32`.
 
-### StreamMessage
+Stream Layer messages are the actual content in streams. They are identified by a [`MessageID`](#messageid), are chained together via a reference to the previous message, [`MessageRef`](#messageref) to establish message order, they are cryptographically signed by their publisher. The most prominent Stream Layer message is the [`StreamMessage`](#streammessage), which is used to transport arbitrary application-level messages from publishers to subscribers. Additionally, there are a few other message types used for requesting and delivering encryption keys.
 
-Contains the data and metadata for a message produced/consumed on a stream. It is a payload at the Control Layer for the following message types: `PublishRequest`, `BroadcastMessage`, `UnicastMessage`. Where `msgId` uniquely identifies the `StreamMessage` and is the array representation of the `MessageID` defined [below](#messageid). `prevMsgRef` allows to identify the previous `StreamMessage` on the same stream and same partition published by the same producer. It is used to detect missing messages. It is the array representation of the `MessageRef` defined [below](#messageref).
+It's worth noting that the following Control Layer messages contain a Stream Layer message: `PublishRequest`, `BroadcastMessage`, and `UnicastMessage`.
 
-```
-[version, msgId, prevMsgRef, contentType, encryptionType, content, signatureType, signature]
-```
-Example:
-```
-[31, [...msgIdFields], [...msgRefFields], 27, 0, "contentData", 1, "0x29c057786Fa..."]
-```
+All Stream Layer messages have the following structure:
 
-Field    | Type | Description
--------- | ---- | --------
-`version` | `number` | Is currently 30.
-`msgId` | MessageID |Array representation of the `MessageID` to uniquely identify this message. 
-`prevMsgRef` | MessageRef | Array representation of the `MessageRef` of the previous message on a message chain (defined in the `msgId`). Used to detect missing messages.
-`contentType` | `number` | Determines how the content should be parsed according to the table below.
-`encryptionType` | `number` | Encryption type as defined by the table below.
-`content` | `string` | Content data of the message.
-`signatureType` | `number` | Signature type as defined by the table below.
-`signature` | `string` | Signature of the message, signed by the producer. Encoding depends on the signature type.
+ ```
+ [version, msgId, prevMsgRef, messageType, contentType, encryptionType, groupKeyId, content, signatureType, signature]
+ ```
+ 
+ Field        | Type      | Description
+ ------------ | --------- | -----------
+ `version`    | `number`  | The protocol version of the Stream Layer
+ `msgId`      | [`MessageID`](#messageid) | The [`MessageID`](#messageid) that uniquely identifies this message.
+ `prevMsgRef` | [`MessageRef`](#messageref) | The [`MessageRef`](#messageref) pointing to the previous message on a message chain. Optional. Used to detect missing messages.
+ `messageType`| `number`  | Determines how the message should be handled. See the table below.
+ `contentType`| `number`  | Determines how the (decrypted) content field should be parsed. For a list of possible values, see the table below.
+ `encryptionType`| `number` | Encryption type as defined by the table below.
+ `groupKeyId`| `string` | Identifies the AES key used by the publisher to encrypt the message content. For AES encryption, the `groupKeyId` is a unique identifier chosen by the publisher. If the message is RSA encrypted (used in key exchange), this field contains the public key of the intended recipient. The field is `null` if the message is not encrypted.
+ `content` | `string` | Content data of the message. Depends on the `messageType` how the content should be handled.
+ `signatureType` | `number` | Signature type as defined by the table below.
+ `signature` | `string` | Signature of the message, signed by the producer. Encoding depends on the signature type.
 
-#### `contentType`
+The various type fields have the following possible values:
 
-`contentType` | Description
+#### `messageType`
+
+`messageType` | Description
 -------------- | --------
-27 | Normal message. The `content` is a string containing a valid JSON object.
+27 | [StreamMessage](#streammessage)
 28 | [GroupKeyRequest](#groupkeyrequest)
 29 | [GroupKeyResponse](#groupkeyresponse)
 30 | [GroupKeyReset](#groupkeyreset)
 31 | [GroupKeyErrorResponse](#groupkeyerrorresponse)
+32 | [GroupKeyRotate](#groupkeyrotate)
 
-#### `signatureType`
+#### `contentType`
 
-`signatureType` | Name | Description | Signature payload fields to be concatenated in order
--------------- | ---- |------------ | -----------------------
-0 | `NONE` | No signature. signature field is empty in this case. | None.
-1 | `ETH_LEGACY` | Ethereum signature produced by old clients (Message Layer version 29). The signature field is encoded as a hex string. | `streamId`, `streamPartition`, `timestamp`, `publisherId`, `content`
-2 | `ETH` | Ethereum signature produced by current clients (since Message Layer version 30). The signature field is encoded as a hex string. | all the `msgId` fields, (`streamId`, `streamPartition`, `timestamp`, `sequenceNumber`, `publisherId`, `msgChainId`), `prevMsgRef`, `content`
+Describes how the `content` should be parsed. 
+
+Note that encrypted `content` is always a hex-encoded binary string. Once decrypted, the `content` should be interpreted based on `contentType`.
+
+`contentType` | Description
+------------- | -----------
+0 | JSON
+
+Other content types, including binary types, will be defined in the future.
 
 #### `encryptionType`
 
 `encryptionType` | Description
 -------------- | --------
 0 | Unencrypted, plaintext message.
-RSA | Content is asymetrically encrypted using RSA.
-AES | Content is symmetrically encrypted using AES.
-NEW_KEY_AND_AES | The content contains a concatenation of a new AES key and the content, encrypted with the old key.
+1 | Content is asymmetrically encrypted using RSA. When using RSA, the `groupKeyId` is set to the public key of the recipient. 
+2 | Content is symmetrically encrypted using AES. When using AES, the `groupKeyId` is set to a unique value chosen by the publisher, used to identify that particular key.
+
+#### `signatureType`
+
+`signatureType` | Name | Description | Signature payload fields to be concatenated in order
+-------------- | ---- |------------ | -----------------------
+0 | `NONE` | No signature. The `signature` field is null in this case. | None.
+1 | `ETH_LEGACY` | Ethereum signature produced by old clients. The signature field is encoded as a hex string. | `streamId`, `streamPartition`, `timestamp`, `publisherId`, `content`
+2 | `ETH` | Ethereum signature produced by current clients (since Stream Layer version 30). The signature field is encoded as a hex string. | `streamId`, `streamPartition`, `timestamp`, `sequenceNumber`, `publisherId`, `msgChainId`, `prevMsgRef.timestamp`, `prevMsgRef.sequenceNumber`, `content`
+
+### StreamMessage
+
+Contains an arbitrary, application-specific `content` payload, i.e. the `content` of this message should be passed to the subscribing application's message handler. This is the message type that applications interact with via publishing and subscribing to messages.
+
+Example (unencrypted JSON message):
+```
+[32, [...msgIdFields], [...msgRefFields], 27, 0, 0, null, "{\"foo\":42}", 2, "0x29c057786Fa..."]
+```
+
+Example (AES-encrypted JSON message):
+```
+[32, [...msgIdFields], [...msgRefFields], 27, 0, 2, "groupKeyId", "9abef2710b", 2, "0x29c057786Fa..."]
+```
+
+### GroupKeyRequest
+
+Sent by a subscriber to the publisher's key exchange stream in order to request a missing symmetric encryption key from the publisher. The protocol implementation should send this message when it encounters a message encrypted with a key that the subscriber doesn't have. The publisher should handle this message and respond with a `GroupKeyResponse` for successfully retrieved keys (if any) and a `GroupKeyErrorResponse` for keys that could not be recovered (if any).
+
+Note that the publisher may have multiple instances connected to the network under the same `publisherId`. All of those instances will receive the `GroupKeyRequest` and respond individually, meaning that the requestor may subsequently receive many `GroupKeyResponse`s and `GroupKeyErrorResponse`s. The implementation should be prepared for receiving many responses for a `GroupKeyRequest`.
+
+`GroupKeyRequest`s must be unencrypted (`encryptionType 0`). They contain no secrets. 
+
+The `content` encoded as `contentType 0` (JSON) is as follows:
+
+```
+[requestId, streamId, rsaPublicKey, [groupKeyIds]]
+```
+
+ Field        | Type      | Description
+ ------------ | --------- | -----------
+ `requestId`  | `string`  | A string to uniquely identify this request. Will be echoed back in the `GroupKeyResponse`.
+ `streamId`   | `string`  | The stream for which a key is being requested.
+ `rsaPublicKey`| `string` | The RSA public key of the requestor. The response will be encrypted for this public key.
+ `groupKeyIds`| `array`   | An array of strings containing the `groupKeyIds` that are being requested.
+ 
+Example of a `GroupKeyRequest` including the rest of the `Stream Layer` fields:
+
+```
+[32, [...msgIdFields], [...msgRefFields], 28, 0, 0, null, ["requestId", "streamId", "rsaPublicKey", ["keyId"]], 2, "0x29c057786Fa..."]
+```
+
+### GroupKeyResponse
+
+Sent by a publisher as a success response to a `GroupKeyRequest`. The response is sent to the requestor's key exchange stream. The requestor should handle this message by adding the contained keys to their key storage, and re-attempting to decrypt any messages that previously could not be decrypted due to missing the keys. 
+
+`GroupKeyResponse`s must be encrypted with (`encryptionType 1 (RSA)`) for the `rsaPublicKey` provided in the `GroupKeyRequest`. The `groupKeyId` should equal the `rsaPublicKey` to help the recipient identify the correct key pair.
+
+The `content` encoded as `contentType 0` (JSON) is as follows:
+
+```
+[requestId, streamId, [groupKeys]]
+```
+
+ Field        | Type      | Description
+ ------------ | --------- | -----------
+ `requestId`  | `string`  | The `requestId` of the `GroupKeyRequest`, identifying which request is being responded to.
+ `streamId`   | `string`  | The stream for which a key is being delivered.
+ `groupKeys`  | `array`   | Array of `[groupKeyId, encryptedGroupKey]` pairs, containing the requested keys encrypted with RSA for the public key provided in the `GroupKeyRequest`. The `encryptedGroupKey` is a hex-encoded binary string.
+ 
+Example of a `GroupKeyResponse` including the rest of the `Stream Layer` fields (`content` shown in plaintext here):
+
+```
+[32, [...msgIdFields], [...msgRefFields], 29, 0, 1, "rsaPublicKey-from-the-request", ["requestId", "streamId", ["keyId","123abc"]], 2, "0x29c057786Fa..."]
+```
+
+Once RSA-encrypted, the message will be:
+
+```
+[32, [...msgIdFields], [...msgRefFields], 29, 0, 1, "rsaPublicKey-from-the-request", "hex-encoded-encrypted-bytes", 2, "0x29c057786Fa..."]
+```
+
+### GroupKeyReset
+
+Sent by publishers to each subscribers' key exchange streams whenever they want to re-key the stream (in order to revoke access from some subscribers). 
+
+The requestor should handle this message by adding the contained keys to their key storage.
+
+`GroupKeyReset`s must be encrypted with (`encryptionType 1 (RSA)`) and publishers should send them to subscribers whose `rsaPublicKey` they are aware of (due to receiving a `GroupKeyRequest` earlier, for example. 
+
+The `content` encoded as `contentType 0` (JSON) is as follows:
+
+```
+[streamId, groupKeyId, groupKey]
+```
+
+ Field        | Type      | Description
+ ------------ | --------- | -----------
+ `streamId`   | `string`  | The stream for which a key is being delivered.
+ `groupKeyId` | `string`  | The id of the `groupKey`.
+ `groupKey`   | `string`  | The group key as a hex-encoded binary string.
+ 
+Example of a `GroupKeyReset` including the rest of the `Stream Layer` fields (`content` shown in plaintext here):
+
+```
+[32, [...msgIdFields], [...msgRefFields], 30, 0, 1, "rsaPublicKey-of-recipient", ["keyId", "123abc"], 2, "0x29c057786Fa..."]
+```
+
+Once RSA-encrypted, the message will be:
+
+```
+[32, [...msgIdFields], [...msgRefFields], 30, 0, 1, "rsaPublicKey-of-recipient", "hex-encoded-encrypted-bytes", 2, "0x29c057786Fa..."]
+```
+
+### GroupKeyErrorResponse
+
+In case there's a problem retrieving the keys requested via a `GroupKeyRequest`, this message gets sent by a publisher to the requestor's key exchange stream. Such error situations might include, for example:
+
+- The requested key might not be found in the publisher's key store
+- The requestor no longer has permissions to access the stream
+- The request was incorrectly formed 
+
+The error response contains the list of keys for which the exchange failed, and an explanation why.
+
+`GroupKeyErrorResponse`s are always unencrypted (`encryptionType 0`). The `content` encoded as `contentType 0` (JSON) is as follows:
+
+```
+[requestId, streamId, errorCode, errorMessage, [groupKeyIds]]
+```
+
+ Field        | Type      | Description
+ ------------ | --------- | -----------
+ `requestId`  | `string`  | The `requestId` of the `GroupKeyRequest`, identifying which request is being responded to.
+ `streamId`   | `string`  | The stream for which a key is being delivered.
+ `errorCode`  | `string`  | An error code to help the subscriber categorize the error.
+ `errorMessage`| `string` | An error message intended for a human, explaining what went wrong.
+ `groupKeyIds`| `array`   | An array of strings containing the `groupKeyIds` that were requested but could not be retrieved due to the error.
+ 
+Example of a `GroupKeyErrorResponse` including the rest of the `Stream Layer` fields:
+
+```
+[32, [...msgIdFields], [...msgRefFields], 31, 0, 0, null, ["requestId", "streamId", "ERROR_CODE", "Error message", ["groupKeyId1"]], 2, "0x29c057786Fa..."]
+```
+
+### GroupKeyRotate
+
+This message is sent by publishers to rotate the encryption key and deliver it to existing subscribers (for forward secrecy). Subscribers should add the contained key into their key storage. The message is encrypted with another (previous) key. Publishers usually send this message to inform subscribers of a new key in advance, so that they every subscriber doesn't need to send a `GroupKeyRequest` to the publisher when they encounter the first `StreamMessage` encrypted with the new key.
+
+`GroupKeyRotate`s must be encrypted (`encryptionType 2 (AES)`), and the immediately preceding key should be used to encrypt it. This allows subscribers who have the preceding key to decrypt and start using the new key. 
+
+The `content` encoded as `contentType 0` (JSON) is as follows:
+
+```
+[groupKeyId, groupKey]
+```
+
+ Field        | Type      | Description
+ ------------ | --------- | -----------
+ `groupKeyId` | `string`  | The id of the `groupKey`.
+ `groupKey`   | `string`  | The group key as a hex-encoded binary string.
+ 
+Example of a decrypted `GroupKeyRotate` including the rest of the `Stream Layer` fields (`content` shown in plaintext here):
+
+```
+[32, [...msgIdFields], [...msgRefFields], 32, 0, 2, "previousGroupKeyId", ["newKeyId", "123abc"], 2, "0x29c057786Fa..."]
+```
+
+Once AES-encrypted, the message will be:
+
+```
+[32, [...msgIdFields], [...msgRefFields], 32, 0, 2, "previousGroupKeyId", "hex-encoded-encrypted-bytes", 2, "0x29c057786Fa..."]
+```
 
 ### MessageID
 
-Uniquely identifies a `StreamMessage`.
+Uniquely identifies a Stream Layer message.
 
 ```
 [streamId, streamPartition, timestamp, sequenceNumber, publisherId, msgChainId]
@@ -504,7 +684,7 @@ Field    | Type | Description
 
 ### MessageRef
 
-Used inside a `StreamMessage` to identify the previous message on the same `msgChainId` (defined above).
+Used inside a Stream Layer message to identify the previous message on the same `msgChainId` (defined above). If the `MessageRef` is not provided by the publisher, then the stream will have weaker delivery guarantees, as subscribers will not be able to detect missing messages and request gapfills.
 
 ```
 [timestamp, sequenceNumber]
@@ -518,58 +698,3 @@ Field    | Type | Description
 -------- | ---- | --------
 `timestamp` | `number` | Timestamp of the `StreamMessage` published on the same stream and same partition by the same producer.
 `sequenceNumber` | `number` | Sequence Number of the `StreamMessage`.
-
-### GroupKeyRequest
-
-Example of valid `content` for `contentType` 28:
-```
-{
-  "requestId": "random-string-to-pair-requests-with-responses",
-  "streamId": "id-of-stream-to-be-decrypted",
-  "publicKey": "subscriber-rsa-public-key",
-  "range": { // optional
-    "start": 342546546,
-    "end": 379080012
-  }
-}
-```
-
-### GroupKeyResponse
-
-Example of valid `content` for `contentType` 29:
-```
-{
-  "requestId": "random-string-to-pair-requests-with-responses", // repeat the requestId of the request
-  "streamId": "id-of-stream-to-be-decrypted",
-  "keys": [{
-    "groupKey": "some-encrypted-group-key"
-    "start": 342546000
-  }, {
-    "groupKey": "some-later-encrypted-group-key"
-    "start": 369146000
-  }]
-}
-```
-
-### GroupKeyReset
-
-Example of valid `content` for `contentType` 30:
-```
-{
-  "streamId": "id-of-stream-to-be-reset",
-  "groupKey": "new-encrypted-group-key"
-  "start": 9086906
-}
-```
-
-### GroupKeyErrorResponse
-
-Example of valid `content` for `contentType` 31:
-```
-{
-  "requestId": "random-string-to-pair-requests-with-responses", // repeat the requestId of the request
-  "streamId": "id-of-stream-for-which-a-key-was-requested",
-  "code": "ERROR_CODE",
-  "message": "Example error message"
-}
-```

@@ -1,14 +1,14 @@
 # Table of Contents
 
 - [Control Layer](#control-layer)
-- [Message Layer](#message-layer)
+- [Stream Layer](#stream-layer)
 - [Key exchange streams](#key-exchange-streams)
 
 # Control Layer
 
 ## PublishRequest, BroadcastMessage, and UnicastMessage
 
-Validated by validating the [`StreamMessage`](#messagelayer) contained in the message.
+Validated by validating the wrapped [Stream Layer](#stream-layer) message.
 
 ## SubscribeRequest and ResendRequests
 
@@ -32,11 +32,9 @@ if (stream is a key exchange stream) {
     check that the sender has stream_subscribe permission to stream
 }
 ```
-# Message Layer
+# Stream Layer
 
-## StreamMessage
-
-### Validating normal payloads (contentType = 27)
+## StreamMessage (messageType = 27)
 
 ```
 if (message is unsigned) {
@@ -49,7 +47,7 @@ if (message is unsigned) {
 
 Note: support for unsigned messages will be dropped later.
 
-### Validating group key requests (contentType = 28)
+## GroupKeyRequest (messageType = 28)
 
 ```
 let S be the stream for which the key request is
@@ -59,7 +57,7 @@ check that the signature is correct
 check that the publisher has stream_subscribe permission to S
 ```
 
-### Validating group key responses (contentType = 29) and resets (contentType = 30)
+## GroupKeyResponse (messageType = 29) and GroupKeyReset (messageType = 30)
 
 ```
 let S be the stream for which the key response/reset is
@@ -67,6 +65,13 @@ let S be the stream for which the key response/reset is
 check that the message was received on a key exchange stream (see below)
 check that the signature is correct
 check that the publisher has stream_publish permission to S
+```
+
+## GroupKeyRotate (messageType = 30)
+
+```
+check that the message is signed and encrypted
+then validate the message as if it was a StreamMessage
 ```
 
 # Key exchange streams
