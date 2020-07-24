@@ -520,9 +520,9 @@ Sent by a subscriber to the publisher's key exchange stream in order to request 
 
 Note that the publisher may have multiple instances connected to the network under the same `publisherId`. All of those instances will receive the `GroupKeyRequest` and respond individually, meaning that the requestor may subsequently receive many `GroupKeyResponse`s and `GroupKeyErrorResponse`s. The implementation should be prepared for receiving many responses for a `GroupKeyRequest`.
 
-`GroupKeyRequest`s must be unencrypted (`encryptionType 0`). They contain no secrets. 
+`GroupKeyRequest`s must be unencrypted (`encryptionType=0`). They contain no secrets. 
 
-The `content` encoded as `contentType 0` (JSON) is as follows:
+The `content` encoded with `contentType=0` (JSON) is as follows:
 
 ```
 [requestId, streamId, rsaPublicKey, [groupKeyIds]]
@@ -545,9 +545,9 @@ Example of a `GroupKeyRequest` including the rest of the `Stream Layer` fields:
 
 Sent by a publisher as a success response to a `GroupKeyRequest`. The response is sent to the requestor's key exchange stream. The requestor should handle this message by adding the contained keys to their key storage, and re-attempting to decrypt any messages that previously could not be decrypted due to missing the keys. 
 
-`GroupKeyResponse`s must be encrypted with (`encryptionType 1 (RSA)`) for the `rsaPublicKey` provided in the `GroupKeyRequest`. The `groupKeyId` should equal the `rsaPublicKey` to help the recipient identify the correct key pair.
+`GroupKeyResponse`s must have `encryptionType=1 (RSA)` and encrypt the group keys delivered in the `content`. The group keys must be encrypted with the `rsaPublicKey` provided in the `GroupKeyRequest`. The `groupKeyId` field should be set to the value of `rsaPublicKey` to help the recipient identify the correct key pair.
 
-The `content` encoded as `contentType 0` (JSON) is as follows:
+The `content` encoded with `contentType=0` (JSON) is as follows:
 
 ```
 [requestId, streamId, [groupKeys]]
@@ -557,19 +557,15 @@ The `content` encoded as `contentType 0` (JSON) is as follows:
  ------------ | --------- | -----------
  `requestId`  | `string`  | The `requestId` of the `GroupKeyRequest`, identifying which request is being responded to.
  `streamId`   | `string`  | The stream for which a key is being delivered.
- `groupKeys`  | `array`   | Array of `[groupKeyId, groupKeyHex]` pairs, containing the keys requested in the `GroupKeyRequest`. `groupKeyHex` is a hex-encoded binary string.
+ `groupKeys`  | `array`   | Array of `[groupKeyId, encryptedGroupKeyHex]` pairs, containing the keys requested in the `GroupKeyRequest`. `encryptedGroupKeyHex` is a hex-encoded binary string, containing an RSA encrypted version of the group key.
  
-Example of a `GroupKeyResponse` including the rest of the `Stream Layer` fields (`content` shown in plaintext here):
+Example of a `GroupKeyResponse` including the rest of the `Stream Layer` fields:
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 29, 0, 1, "rsaPublicKey-from-the-request", "[\"requestId\", \"streamId\", [\"keyId\", \"123abc\"]]", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 29, 0, 1, "rsaPublicKey-from-the-request", "[\"requestId\", \"streamId\", [\"keyId\", \"encrypted-group-key\"]]", 2, "0x29c057786Fa..."]
 ```
 
-Once RSA-encrypted, the message will be:
-
-```
-[32, [...msgIdFields], [...msgRefFields], 29, 0, 1, "rsaPublicKey-from-the-request", "hex-encoded-encrypted-bytes", 2, "0x29c057786Fa..."]
-```
+Note that unlike `StreamMessage`s, here the whole `content` is not encrypted, only the group keys.
 
 ### GroupKeyAnnounce
 
@@ -579,12 +575,12 @@ There are two distinct situations in which a `GroupKeyAnnounce` is sent. They di
 
  stream       | `encryptionType` | Goal
  ------------ | --------- | -----------
- each subscriber's key exchange stream  | RSA | Publisher wants to re-key: revoke access from some subscribers. The message is encrypted with each subscriber's public key.
- the stream itself  | AES | Publisher wants to rotate key: keep the set of subscribers unchanged but create a forward secrecy checkpoint (subsequent compromised keys don't expose earlier messages). The message is encrypted with the immediately previous group key.
+ each subscriber's key exchange stream  | `1` (RSA) | Publisher wants to re-key: revoke access from some subscribers. The gruop keys are encrypted with each subscriber's public key.
+ the stream itself  | `2` (AES) | Publisher wants to rotate key: keep the set of subscribers unchanged but create a forward secrecy checkpoint (subsequent compromised keys don't expose earlier messages). The group keys are encrypted with the immediately previous group key.
 
 The recipient should handle this message by adding the contained key to their key storage.
 
-The `content` encoded as `contentType 0` (JSON) is as follows:
+The `content` encoded with `contentType=0` (JSON) is as follows:
 
 ```
 [streamId, [groupKeys]]
@@ -593,25 +589,23 @@ The `content` encoded as `contentType 0` (JSON) is as follows:
  Field        | Type      | Description
  ------------ | --------- | -----------
  `streamId`   | `string`  | The stream for which a key is being delivered. 
- `groupKeys`  | `array`   | Array of `[groupKeyId, groupKeyHex]`
+  `groupKeys`  | `array`   | Array of `[groupKeyId, encryptedGroupKeyHex]` pairs. `encryptedGroupKeyHex` is a hex-encoded binary string, containing an RSA- or AES-encrypted version of the group key.
  
-Example of a `GroupKeyAnnounce` including the rest of the `Stream Layer` fields (`content` shown in plaintext here):
-
-```
-[32, [...msgIdFields], [...msgRefFields], 30, 0, 1, "rsaPublicKey-of-recipient", "[\"streamId\", [\"keyId\", \"123abc\"]]", 2, "0x29c057786Fa..."]
-```
+Examples of a `GroupKeyAnnounce` messages including the rest of the `Stream Layer` fields:
 
 If RSA-encrypted (rekey), the message will be:
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 30, 0, 1, "rsaPublicKey-of-recipient", "hex-encoded-encrypted-bytes", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 30, 0, 1, "rsaPublicKey-of-recipient", "[\"streamId\", [\"keyId\", \"RSA-encrypted-group-key-hex\"]]", 2, "0x29c057786Fa..."]
 ```
 
 If AES-encrypted (rotate), the message will be:
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 30, 0, 2, "previousGroupKeyId", "hex-encoded-encrypted-bytes", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 30, 0, 2, "previousGroupKeyId", "[\"streamId\", [\"keyId\", \"AES-encrypted-group-key-hex\"]]", 2, "0x29c057786Fa..."]
 ```
+
+Note that unlike `StreamMessage`s, here the whole `content` is not encrypted, only the group keys.
 
 ### GroupKeyErrorResponse
 
@@ -623,7 +617,7 @@ In case there's a problem retrieving the keys requested via a `GroupKeyRequest`,
 
 The error response contains the list of keys for which the exchange failed, and an explanation why.
 
-`GroupKeyErrorResponse`s are always unencrypted (`encryptionType 0`). The `content` encoded as `contentType 0` (JSON) is as follows:
+`GroupKeyErrorResponse`s are always unencrypted (`encryptionType=0`). The `content` encoded with `contentType=0` (JSON) is as follows:
 
 ```
 [requestId, streamId, errorCode, errorMessage, [groupKeyIds]]
