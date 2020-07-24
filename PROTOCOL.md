@@ -456,7 +456,7 @@ All Stream Layer messages have the following structure:
  `groupKeyId`| `string` | Identifies the AES key used by the publisher to encrypt the message content. For AES encryption, the `groupKeyId` is a unique identifier chosen by the publisher. If the message is RSA encrypted (used in key exchange), this field contains the public key of the intended recipient. The field is `null` if the message is not encrypted.
  `content` | `string` | Content data of the message. Depends on the `messageType` how the content should be handled.
  `signatureType` | `number` | Signature type as defined by the table below.
- `signature` | `string` | Signature of the message, signed by the producer. Encoding depends on the signature type.
+ `signature` | `string` | Signature of the message, signed by the publisher. A hex-encoded string.
 
 The various type fields have the following possible values:
 
@@ -488,15 +488,17 @@ Other content types, including binary types, will be defined in the future.
 -------------- | --------
 0 | Unencrypted, plaintext message.
 1 | Content is asymmetrically encrypted using RSA. When using RSA, the `groupKeyId` is set to the public key of the recipient. 
-2 | Content is symmetrically encrypted using AES. When using AES, the `groupKeyId` is set to a unique value chosen by the publisher, used to identify that particular key.
+2 | Content is symmetrically encrypted using AES. When using AES, the `groupKeyId` is set to a unique value freely chosen by the publisher, used to identify and refer to the key used.
 
 #### `signatureType`
 
 `signatureType` | Name | Description | Signature payload fields to be concatenated in order
 -------------- | ---- |------------ | -----------------------
 0 | `NONE` | No signature. The `signature` field is null in this case. | None.
-1 | `ETH_LEGACY` | Ethereum signature produced by old clients. The signature field is encoded as a hex string. | `streamId`, `streamPartition`, `timestamp`, `publisherId`, `content`
-2 | `ETH` | Ethereum signature produced by current clients (since Stream Layer version 30). The signature field is encoded as a hex string. | `streamId`, `streamPartition`, `timestamp`, `sequenceNumber`, `publisherId`, `msgChainId`, `prevMsgRef.timestamp`, `prevMsgRef.sequenceNumber`, `content`
+1 | `ETH_LEGACY` | Ethereum signature produced by old clients. The `signature` field is encoded as a hex-encoded string. | `streamId`, `streamPartition`, `timestamp`, `publisherId`, `content`
+2 | `ETH` | Ethereum signature produced by current clients (since Stream Layer version 30). The signature field is a hex-encoded string. | `streamId`, `streamPartition`, `timestamp`, `sequenceNumber`, `publisherId`, `msgChainId`, `prevMsgRef.timestamp` (if not null), `prevMsgRef.sequenceNumber` (if not null), `content`
+
+The concatenated payload is signed using the same [ECDSA and secp256k1 based method used in Ethereum](https://yos.io/2018/11/16/ethereum-signatures/).
 
 ### StreamMessage
 
