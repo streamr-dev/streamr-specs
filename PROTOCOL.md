@@ -442,7 +442,7 @@ It's worth noting that the following Control Layer messages contain a Stream Lay
 All Stream Layer messages have the following structure:
 
  ```
- [version, msgId, prevMsgRef, messageType, contentType, encryptionType, groupKeyId, content, signatureType, signature]
+ [version, msgId, prevMsgRef, messageType, contentType, encryptionType, groupKeyId, content, newGroupKey, signatureType, signature]
  ```
  
  Field        | Type      | Description
@@ -454,7 +454,8 @@ All Stream Layer messages have the following structure:
  `contentType`| `number`  | Determines how the (decrypted) content field should be parsed. For a list of possible values, see the table below.
  `encryptionType`| `number` | Encryption type as defined by the table below.
  `groupKeyId`| `string` | Identifies the AES key used by the publisher to encrypt the message content. For AES encryption, the `groupKeyId` is a unique identifier chosen by the publisher. If the message is RSA encrypted (used in key exchange), this field contains the public key of the intended recipient. The field is `null` if the message is not encrypted.
- `content` | `string` | Content data of the message. Depends on the `messageType` how the content should be handled.
+ `content` | `string` | Content data of the message. Depends on the `messageType` how the content should be handled. In a [StreamMessage](#streammessage) the `content` is arbitrary, while in the other message types it follows a certain structure.
+ `newGroupKey`| [`GroupKey`](#groupkey) | Used in key rotation to communicate a future key along with the message. The field is `null` if the message doesn't contain a new key.
  `signatureType` | `number` | Signature type as defined by the table below.
  `signature` | `string` | Signature of the message, signed by the publisher. A hex-encoded string.
 
@@ -495,8 +496,7 @@ Other content types, including binary types, will be defined in the future.
 `signatureType` | Name | Description | Signature payload fields to be concatenated in order
 -------------- | ---- |------------ | -----------------------
 0 | `NONE` | No signature. The `signature` field is null in this case. | None.
-1 | `ETH_LEGACY` | Ethereum signature produced by old clients. The `signature` field is encoded as a hex-encoded string. | `streamId`, `streamPartition`, `timestamp`, `publisherId`, `content`
-2 | `ETH` | Ethereum signature produced by current clients (since Stream Layer version 30). The signature field is a hex-encoded string. | `streamId`, `streamPartition`, `timestamp`, `sequenceNumber`, `publisherId`, `msgChainId`, `prevMsgRef.timestamp` (if not null), `prevMsgRef.sequenceNumber` (if not null), `content`
+2 | `ETH` | Ethereum signature produced by current clients (since Stream Layer version 30). The signature field is a hex-encoded string. | `streamId`, `streamPartition`, `timestamp`, `sequenceNumber`, `publisherId`, `msgChainId`, `prevMsgRef.timestamp`, `prevMsgRef.sequenceNumber`, `content`, `newGroupKey` (fields with `null` values are simply skipped)
 
 The concatenated payload is signed using the same [ECDSA and secp256k1 based method used in Ethereum](https://yos.io/2018/11/16/ethereum-signatures/).
 
@@ -506,12 +506,17 @@ Contains an arbitrary, application-specific `content` payload, i.e. the `content
 
 Example (unencrypted JSON message):
 ```
-[32, [...msgIdFields], [...msgRefFields], 27, 0, 0, null, "{\"foo\":42}", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 27, 0, 0, null, "{\"foo\":42}", null, 2, "0x29c057786Fa..."]
 ```
 
 Example (AES-encrypted JSON message):
 ```
-[32, [...msgIdFields], [...msgRefFields], 27, 0, 2, "groupKeyId", "9abef2710b", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 27, 0, 2, "groupKeyId", "9abef2710b", null, 2, "0x29c057786Fa..."]
+```
+
+Example (AES-encrypted JSON message carrying an [EncryptedGroupKey](#encryptedgroupkey)):
+```
+[32, [...msgIdFields], [...msgRefFields], 27, 0, 2, "groupKeyId", "9abef2710b", "[\"newGroupKeyId\", \"encryptedGroupKey\"]", 2, "0x29c057786Fa..."]
 ```
 
 ### GroupKeyRequest
@@ -538,7 +543,7 @@ The `content` encoded with `contentType=0` (JSON) is as follows:
 Example of a `GroupKeyRequest` including the rest of the `Stream Layer` fields:
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 28, 0, 0, null, "[\"requestId\", \"streamId\", \"rsaPublicKey\", [\"keyId\"]]", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 28, 0, 0, null, "[\"requestId\", \"streamId\", \"rsaPublicKey\", [\"keyId\"]]", null, 2, "0x29c057786Fa..."]
 ```
 
 ### GroupKeyResponse
@@ -562,21 +567,14 @@ The `content` encoded with `contentType=0` (JSON) is as follows:
 Example of a `GroupKeyResponse` including the rest of the `Stream Layer` fields:
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 29, 0, 1, "rsaPublicKey-from-the-request", "[\"requestId\", \"streamId\", [\"keyId\", \"encrypted-group-key\"]]", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 29, 0, 1, "rsaPublicKey-from-the-request", "[\"requestId\", \"streamId\", [\"keyId\", \"encrypted-group-key\"]]", null, 2, "0x29c057786Fa..."]
 ```
 
 Note that unlike `StreamMessage`s, here the whole `content` is not encrypted, only the group keys.
 
 ### GroupKeyAnnounce
 
-Sent spontaneously (not as a response to a request) by publishers to subscribers to let them know about new key(s). 
-
-There are two distinct situations in which a `GroupKeyAnnounce` is sent. They differ in terms of which stream they get sent to, how they are encrypted, and what the publisher wants to accomplish.
-
- stream       | `encryptionType` | Goal
- ------------ | --------- | -----------
- each subscriber's key exchange stream  | `1` (RSA) | Publisher wants to re-key: revoke access from some subscribers. The gruop keys are encrypted with each subscriber's public key.
- the stream itself  | `2` (AES) | Publisher wants to rotate key: keep the set of subscribers unchanged but create a forward secrecy checkpoint (subsequent compromised keys don't expose earlier messages). The group keys are encrypted with the immediately previous group key.
+When publishers want to rekey the stream, they send the `GroupKeyAnnounce` to each subscriber's key exchange stream. The message is sent RSA encrypted to each recipient's key exchange stream separately.
 
 The recipient should handle this message by adding the contained key to their key storage.
 
@@ -589,20 +587,12 @@ The `content` encoded with `contentType=0` (JSON) is as follows:
  Field        | Type      | Description
  ------------ | --------- | -----------
  `streamId`   | `string`  | The stream for which a key is being delivered. 
-  `groupKeys`  | `array`   | Array of `[groupKeyId, encryptedGroupKeyHex]` pairs. `encryptedGroupKeyHex` is a hex-encoded binary string, containing an RSA- or AES-encrypted version of the group key.
+  `groupKeys`  | `array`   | Array of [GroupKeys](#groupkey).
  
 Examples of a `GroupKeyAnnounce` messages including the rest of the `Stream Layer` fields:
 
-If RSA-encrypted (rekey), the message will be:
-
 ```
-[32, [...msgIdFields], [...msgRefFields], 30, 0, 1, "rsaPublicKey-of-recipient", "[\"streamId\", [\"keyId\", \"RSA-encrypted-group-key-hex\"]]", 2, "0x29c057786Fa..."]
-```
-
-If AES-encrypted (rotate), the message will be:
-
-```
-[32, [...msgIdFields], [...msgRefFields], 30, 0, 2, "previousGroupKeyId", "[\"streamId\", [\"keyId\", \"AES-encrypted-group-key-hex\"]]", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 30, 0, 1, "rsaPublicKey-of-recipient", "[\"streamId\", [\"newGroupKeyId\", \"RSA-encrypted-group-key-hex\"]]", null, 2, "0x29c057786Fa..."]
 ```
 
 Note that unlike `StreamMessage`s, here the whole `content` is not encrypted, only the group keys.
@@ -634,7 +624,7 @@ The error response contains the list of keys for which the exchange failed, and 
 Example of a `GroupKeyErrorResponse` including the rest of the `Stream Layer` fields:
 
 ```
-[32, [...msgIdFields], [...msgRefFields], 31, 0, 0, null, "[\"requestId\", \"streamId\", \"ERROR_CODE\", \"Error message\", [\"groupKeyId1\"]]", 2, "0x29c057786Fa..."]
+[32, [...msgIdFields], [...msgRefFields], 31, 0, 0, null, "[\"requestId\", \"streamId\", \"ERROR_CODE\", \"Error message\", [\"groupKeyId1\"]]", null, 2, "0x29c057786Fa..."]
 ```
 
 ### MessageID
@@ -674,3 +664,20 @@ Field    | Type | Description
 -------- | ---- | --------
 `timestamp` | `number` | Timestamp of the `StreamMessage` published on the same stream and same partition by the same producer.
 `sequenceNumber` | `number` | Sequence Number of the `StreamMessage`.
+
+### GroupKey
+
+Used in key rotation to deliver a new key to existing subscribers. The format is as follows:
+
+```
+[groupKeyId, encryptedGroupKey]
+```
+Example:
+```
+["newGroupKeyId", "abc123"]
+``` 
+
+Field    | Type | Description
+-------- | ---- | --------
+`groupKeyId` | `string` | Unique identifier of the key, arbitrarily chosen by the publisher.
+`encryptedGroupKey` | `string` | Hex-encoded, encrypted group key bytes. Encrypted with RSA or AES, depending on the `encryptionType` flag set on the surrounding message.
