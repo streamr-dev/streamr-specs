@@ -11,19 +11,12 @@ The JSON messages are UTF8 encoded when transported under an underlying binary p
 ## Layers
 
 The Streamr Protocol is made of three layers:
-- **Network Layer:** Responsible for end-to-end unicast/multicast/broadcast communication primitives in the peer-to-peer network. Encapsulates messages from the Control Layer and defines other messages specific to communication between nodes that clients shouldn't be concerned with.
-- **Control Layer:** Defines the control messages allowing communication entities to publish, subscribe, resend, etc... These messages are encapsulated by the Network Layer.
+- **Control Layer:** Defines the control messages that allow communication entities to find each other, publish, subscribe, resend, etc.
 - **Stream Layer:** Messages published to streams. The Stream Layer defines the format of these message payloads, consisting of data and metadata of the messages. Note that some messages in the Control Layer wrap Stream Layer messages. 
 
 This documentation describes the messages in each layer.
 
 ## Table of contents
-- [Network Layer](#network-layer)
-    - [StatusMessage](#statusmessage)
-    - [InstructionMessage](#instructionmessage)
-    - [FindStorageNodesMessage](#findstoragenodesmessage)
-    - [StorageNodesMessage](#storagenodesmessage)
-    - [WrapperMessage](#wrappermessage)
 - [Control Layer](#control-layer)
     - [PublishRequest](#publishrequest)
     - [SubscribeRequest](#subscriberequest)
@@ -39,6 +32,10 @@ This documentation describes the messages in each layer.
     - [ResendResponseResent](#resendresponseresent)
     - [ResendResponseNoResend](#resendresponsenoresend)
     - [ErrorResponse](#errorresponse)
+    - [StatusMessage](#statusmessage)
+    - [InstructionMessage](#instructionmessage)
+    - [FindStorageNodesMessage](#findstoragenodesmessage)
+    - [StorageNodesMessage](#storagenodesmessage)
 - [Stream Layer](#stream-layer)
     - [StreamMessage](#streammessage)
     - [MessageID](#messageid)
@@ -47,105 +44,6 @@ This documentation describes the messages in each layer.
     - [GroupKeyResponse](#groupkeyresponse)
     - [GroupKeyReset](#groupkeyreset)
     - [GroupKeyErrorResponse](#groupkeyerrorresponse)
-
-
-## Network Layer
-
-All messages of the Network Layer are transmitted as JSON arrays with the following fields: `[version, type, source, ...typeSpecificFields]`.
-`version` describes the version of the Network Layer. `type` is an integer to identify the message type according to the following table: 
-
-messageType | Description
------------ | -----------
-0 | StatusMessage
-1 | InstructionMessage
-2 | FindStorageNodesMessage
-3 | StorageNodesMessage
-4 | WrapperMessage
-
-`source` is a string to identify the node that sent the message.
-
-### StatusMessage
-
-TODO: description of the purpose and usage of this message type.
-
-```
-[version, type, source, status]
-```
-Example:
-```
-["4.4.3", 0, "sender", "status"]
-```
-
-Field    | Type | Description
--------- | ---- | --------
-`status` | `string` | TODO
-
-### InstructionMessage
-
-TODO: description of the purpose and usage of this message type.
-
-```
-[version, type, source, streamId, nodeAddresses]
-```
-Example:
-```
-["4.4.3", 1, "sender", "stream-id", ["address1", "address2"]]
-```
-
-Field    | Type | Description
--------- | ---- | --------
-`streamId` | `string` | TODO
-`nodeAddresses` | `array` | TODO
-
-### FindStorageNodesMessage
-
-TODO: description of the purpose and usage of this message type.
-
-```
-[version, type, source, streamId]
-```
-Example:
-```
-["4.4.3", 2, "sender", "stream-id"]
-```
-
-Field    | Type | Description
--------- | ---- | --------
-`streamId` | `string` | TODO
-
-### StorageNodesMessage
-
-TODO: description of the purpose and usage of this message type.
-
-```
-[version, type, source, streamId, nodeAddresses]
-```
-Example:
-```
-["4.4.3", 1, "sender", "stream-id", ["address1", "address2"]]
-```
-
-Field    | Type | Description
--------- | ---- | --------
-`streamId` | `string` | TODO
-`nodeAddresses` | `array` | TODO
-
-### WrapperMessage
-
-Encapsulates messages of the Control Layer.
-
-```
-[version, type, source, controlLayerPayload]
-```
-Example:
-```
-// This encapsulates a SubscribeRequest (See in Control Layer section)
-["4.4.3", 4, "sender", [2, 9, "stream-id", 0, "my-session-token"]]
-```
-
-Field    | Type | Description
--------- | ---- | --------
-`controlLayerPayload` | ControlMessage | The array representation of the encapsulated `ControlMessage` (See Control Layer).
 
 ## Control Layer
 
@@ -177,6 +75,11 @@ type | Description
 11 | ResendLastRequest
 12 | ResendFromRequest
 13 | ResendRangeRequest
+14 | StatusMessage
+15 | InstructionMessage
+16 | FindStorageNodesMessage
+17 | StorageNodesMessage
+
 
 The individual types are described in the remainder of this section. We start by describing the requests and then the responses.
 
@@ -430,6 +333,80 @@ Field    | Type | Description
 -------- | ---- | --------
 `errorMessage` | `string` | Human-readable message describing the error.
 `errorCode` | `string` | Machine-readable string describing the type of error.
+
+### Messages between tracker and node
+
+These messages are exchanged between trackers and nodes for peer discovery and topology formation.
+
+### StatusMessage
+
+A node reports its status to the tracker using this message.
+
+```
+[version, type, status]
+```
+Example:
+```
+[2, 14, {
+    streams: [],
+    started: 0,
+    rtts: {}
+}]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`status` | `object` | state of node
+
+### InstructionMessage
+
+The tracker instructs nodes to connect to (and disconnect from) other nodes using this message.
+
+```
+[version, type, streamId, nodeAddresses]
+```
+Example:
+```
+[2, 15, "stream-id", ["ws://address1", "ws://address2"]]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`streamId` | `string` | stream id
+`nodeAddresses` | `array` | list of nodes the receiving node should be connected to
+
+### FindStorageNodesMessage
+
+Sent by node to tracker to find a storage node for a stream.
+
+```
+[version, type, streamId]
+```
+Example:
+```
+[2, 16, "stream-id"]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`streamId` | `string` | TODO
+
+### StorageNodesMessage
+
+Response from tracker to node's `FindStorageNodesMessage` providing connection information of storage node.
+
+```
+[version, type, streamId, nodeAddresses]
+```
+Example:
+```
+[2, 17, "stream-id", ["ws://storage-node-address-1", "ws://storage-node-address-2"]]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`streamId` | `string` | stream id
+`nodeAddresses` | `array` | list of storage nodes associated with stream
 
 ## Stream Layer
 
