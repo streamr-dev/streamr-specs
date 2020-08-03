@@ -363,11 +363,11 @@ Field    | Type | Description
 The tracker instructs nodes to connect to (and disconnect from) other nodes using this message.
 
 ```
-[version, type, streamId, nodeAddresses]
+[version, type, requestId, streamId, nodeAddresses]
 ```
 Example:
 ```
-[2, 15, "stream-id", ["ws://address1", "ws://address2"]]
+[2, 15, "request-id", "stream-id", ["ws://address1", "ws://address2"]]
 ```
 
 Field    | Type | Description
@@ -380,11 +380,11 @@ Field    | Type | Description
 Sent by node to tracker to find a storage node for a stream.
 
 ```
-[version, type, streamId]
+[version, type, requestId, streamId]
 ```
 Example:
 ```
-[2, 16, "stream-id"]
+[2, 16, "request-id", stream-id"]
 ```
 
 Field    | Type | Description
@@ -396,11 +396,11 @@ Field    | Type | Description
 Response from tracker to node's `FindStorageNodesMessage` providing connection information of storage node.
 
 ```
-[version, type, streamId, nodeAddresses]
+[version, type, requestId, streamId, nodeAddresses]
 ```
 Example:
 ```
-[2, 17, "stream-id", ["ws://storage-node-address-1", "ws://storage-node-address-2"]]
+[2, 17, "request-id", stream-id", ["ws://storage-node-address-1", "ws://storage-node-address-2"]]
 ```
 
 Field    | Type | Description
