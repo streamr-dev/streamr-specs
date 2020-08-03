@@ -363,7 +363,7 @@ Field    | Type | Description
 The tracker instructs nodes to connect to (and disconnect from) other nodes using this message.
 
 ```
-[version, type, requestId, streamId, nodeAddresses]
+[version, type, requestId, streamId, streamPartition, nodeAddresses]
 ```
 Example:
 ```
@@ -373,6 +373,7 @@ Example:
 Field    | Type | Description
 -------- | ---- | --------
 `streamId` | `string` | stream id
+`streamPartition` | `number` | stream partition
 `nodeAddresses` | `array` | list of nodes the receiving node should be connected to
 
 ### FindStorageNodesMessage
@@ -380,7 +381,7 @@ Field    | Type | Description
 Sent by node to tracker to find a storage node for a stream.
 
 ```
-[version, type, requestId, streamId]
+[version, type, requestId, streamId, streamPartition]
 ```
 Example:
 ```
@@ -389,14 +390,15 @@ Example:
 
 Field    | Type | Description
 -------- | ---- | --------
-`streamId` | `string` | TODO
+`streamId` | `string` | stream id
+`streamPartition` | `number` | stream partition
 
 ### StorageNodesMessage
 
 Response from tracker to node's `FindStorageNodesMessage` providing connection information of storage node.
 
 ```
-[version, type, requestId, streamId, nodeAddresses]
+[version, type, requestId, streamId, streamPartition, nodeAddresses]
 ```
 Example:
 ```
@@ -406,6 +408,7 @@ Example:
 Field    | Type | Description
 -------- | ---- | --------
 `streamId` | `string` | stream id
+`streamPartition` | `number` | stream partition
 `nodeAddresses` | `array` | list of storage nodes associated with stream
 
 ## Stream Layer
