@@ -363,11 +363,11 @@ Field    | Type | Description
 The tracker instructs nodes to connect to (and disconnect from) other nodes using this message.
 
 ```
-[version, type, requestId, streamId, streamPartition, nodeAddresses]
+[version, type, requestId, streamId, streamPartition, nodeAddresses, counter]
 ```
 Example:
 ```
-[2, 15, "request-id", "stream-id", ["ws://address1", "ws://address2"]]
+[2, 15, "request-id", "stream-id", ["ws://address1", "ws://address2"], 10]
 ```
 
 Field    | Type | Description
@@ -375,6 +375,7 @@ Field    | Type | Description
 `streamId` | `string` | stream id
 `streamPartition` | `number` | stream partition
 `nodeAddresses` | `array` | list of nodes the receiving node should be connected to
+`counter` | `number` | incrementing counter value to keep track of latest instruction
 
 ### FindStorageNodesMessage
 
