@@ -367,7 +367,7 @@ The tracker instructs nodes to connect to (and disconnect from) other nodes usin
 ```
 Example:
 ```
-[2, 15, "request-id", "stream-id", ["ws://address1", "ws://address2"], 10]
+[2, 15, "request-id", "stream-id", 0, ["ws://address1", "ws://address2"], 10]
 ```
 
 Field    | Type | Description
@@ -386,7 +386,7 @@ Sent by node to tracker to find a storage node for a stream.
 ```
 Example:
 ```
-[2, 16, "request-id", stream-id"]
+[2, 16, "request-id", stream-id", 0]
 ```
 
 Field    | Type | Description
@@ -403,7 +403,7 @@ Response from tracker to node's `FindStorageNodesMessage` providing connection i
 ```
 Example:
 ```
-[2, 17, "request-id", stream-id", ["ws://storage-node-address-1", "ws://storage-node-address-2"]]
+[2, 17, "request-id", stream-id", 0, ["ws://storage-node-address-1", "ws://storage-node-address-2"]]
 ```
 
 Field    | Type | Description
