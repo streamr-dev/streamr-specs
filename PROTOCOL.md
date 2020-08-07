@@ -34,7 +34,7 @@ This documentation describes the messages in each layer.
     - [ErrorResponse](#errorresponse)
     - [StatusMessage](#statusmessage)
     - [InstructionMessage](#instructionmessage)
-    - [StorageNodesRequest](sStoragenodesrequest)
+    - [StorageNodesRequest](#storagenodesrequest)
     - [StorageNodesResponse](#storagenodesresponse)
 - [Stream Layer](#stream-layer)
     - [StreamMessage](#streammessage)
