@@ -34,8 +34,8 @@ This documentation describes the messages in each layer.
     - [ErrorResponse](#errorresponse)
     - [StatusMessage](#statusmessage)
     - [InstructionMessage](#instructionmessage)
-    - [FindStorageNodesMessage](#findstoragenodesmessage)
-    - [StorageNodesMessage](#storagenodesmessage)
+    - [StorageNodesRequest](sStoragenodesrequest)
+    - [StorageNodesResponse](#storagenodesresponse)
 - [Stream Layer](#stream-layer)
     - [StreamMessage](#streammessage)
     - [MessageID](#messageid)
@@ -77,8 +77,8 @@ type | Description
 13 | ResendRangeRequest
 14 | StatusMessage
 15 | InstructionMessage
-16 | FindStorageNodesMessage
-17 | StorageNodesMessage
+16 | StorageNodesRequest
+17 | StorageNodesResponse
 
 
 The individual types are described in the remainder of this section. We start by describing the requests and then the responses.
@@ -377,7 +377,7 @@ Field    | Type | Description
 `nodeAddresses` | `array` | list of nodes the receiving node should be connected to
 `counter` | `number` | incrementing counter value to keep track of latest instruction
 
-### FindStorageNodesMessage
+### StorageNodesRequest
 
 Sent by node to tracker to find a storage node for a stream.
 
@@ -394,9 +394,9 @@ Field    | Type | Description
 `streamId` | `string` | stream id
 `streamPartition` | `number` | stream partition
 
-### StorageNodesMessage
+### StorageNodesResponse
 
-Response from tracker to node's `FindStorageNodesMessage` providing connection information of storage node.
+Response from tracker to node's `StorageNodesRequest` providing connection information of storage node.
 
 ```
 [version, type, requestId, streamId, streamPartition, nodeAddresses]
