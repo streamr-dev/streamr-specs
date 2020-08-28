@@ -57,7 +57,7 @@ check that the signature is correct
 check that the publisher has stream_subscribe permission to S
 ```
 
-## GroupKeyResponse (messageType = 29) and GroupKeyReset (messageType = 30)
+## GroupKeyResponse (messageType = 29)
 
 ```
 let S be the stream for which the key response/reset is
@@ -67,11 +67,16 @@ check that the signature is correct
 check that the publisher has stream_publish permission to S
 ```
 
-## GroupKeyRotate (messageType = 30)
+## GroupKeyAnnounce (messageType = 30)
+
+`GroupKeyAnnounce` can be published on a subscriber's key exchange stream, or on the stream itself. This affects how they are validated:
 
 ```
-check that the message is signed and encrypted
-then validate the message as if it was a StreamMessage
+if (message is published on a key exchange stream) {
+    validate the message using the same logic as for GroupKeyResponse
+} else {
+    validate the message using the same logic as for StreamMessage
+}
 ```
 
 # Key exchange streams
