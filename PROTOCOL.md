@@ -611,7 +611,7 @@ Example:
 
 Field    | Type | Description
 -------- | ---- | --------
-`status` | `object` | state of node
+`status` | `object` | state of node (details to be filled in later, subject to change)
 
 ### InstructionMessage
 
