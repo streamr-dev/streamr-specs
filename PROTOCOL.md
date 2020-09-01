@@ -8,23 +8,17 @@ The Streamr Protocol is a JSON protocol. This means that we have the following t
 
 The JSON messages are UTF8 encoded when transported under an underlying binary protocol (which from the perspective of the message definitions is undefined, but in practice the network uses websocket and in the future WebRTC).  
 
-## Layers
+## Sub-Protocols
 
-The Streamr Protocol is made of three layers:
-- **Network Layer:** Responsible for end-to-end unicast/multicast/broadcast communication primitives in the peer-to-peer network. Encapsulates messages from the Control Layer and defines other messages specific to communication between nodes that clients shouldn't be concerned with.
-- **Control Layer:** Defines the control messages allowing communication entities to publish, subscribe, resend, etc... These messages are encapsulated by the Network Layer.
-- **Stream Layer:** Messages published to streams. The Stream Layer defines the format of these message payloads, consisting of data and metadata of the messages. Note that some messages in the Control Layer wrap Stream Layer messages. 
+The Streamr Protocol consists of three sub-protocols:
+- **Control Protocol:** messages that allow communication entities to publish, subscribe, resend, etc.
+- **Stream Protocol:** messages published to streams and related entities. Note that some Control Protocol messages wrap Stream Protocol messages. 
+- **Tracker Protocol:** messages exchanged between trackers and nodes. Allows nodes to find each other, as well as inform the tracker of their status. 
 
-This documentation describes the messages in each layer.
+This documentation describes the messages and entities in each sub-protocol.
 
 ## Table of contents
-- [Network Layer](#network-layer)
-    - [StatusMessage](#statusmessage)
-    - [InstructionMessage](#instructionmessage)
-    - [FindStorageNodesMessage](#findstoragenodesmessage)
-    - [StorageNodesMessage](#storagenodesmessage)
-    - [WrapperMessage](#wrappermessage)
-- [Control Layer](#control-layer)
+- [Control Protocol](#control-protocol)
     - [PublishRequest](#publishrequest)
     - [SubscribeRequest](#subscriberequest)
     - [UnsubscribeRequest](#unsubscriberequest)
@@ -39,7 +33,7 @@ This documentation describes the messages in each layer.
     - [ResendResponseResent](#resendresponseresent)
     - [ResendResponseNoResend](#resendresponsenoresend)
     - [ErrorResponse](#errorresponse)
-- [Stream Layer](#stream-layer)
+- [Stream Protocol](#stream-protocol)
     - [StreamMessage](#streammessage)
     - [MessageID](#messageid)
     - [MessageRef](#messageref)
@@ -47,115 +41,21 @@ This documentation describes the messages in each layer.
     - [GroupKeyResponse](#groupkeyresponse)
     - [GroupKeyAnnounce](#groupkeyannounce)
     - [GroupKeyErrorResponse](#groupkeyerrorresponse)
+- [Tracker Protocol](#tracker-protocol)
+    - [StatusMessage](#statusmessage)
+    - [InstructionMessage](#instructionmessage)
+    - [StorageNodesRequest](sStoragenodesrequest)
+    - [StorageNodesResponse](#storagenodesresponse)
 
+## Control Protocol
 
-## Network Layer
+This document describes version `2` of the Control Protocol.
 
-All messages of the Network Layer are transmitted as JSON arrays with the following fields: `[version, type, source, ...typeSpecificFields]`.
-`version` describes the version of the Network Layer. `type` is an integer to identify the message type according to the following table: 
-
-messageType | Description
------------ | -----------
-0 | StatusMessage
-1 | InstructionMessage
-2 | FindStorageNodesMessage
-3 | StorageNodesMessage
-4 | WrapperMessage
-
-`source` is a string to identify the node that sent the message.
-
-### StatusMessage
-
-TODO: description of the purpose and usage of this message type.
-
-```
-[version, type, source, status]
-```
-Example:
-```
-["4.4.3", 0, "sender", "status"]
-```
-
-Field    | Type | Description
--------- | ---- | --------
-`status` | `string` | TODO
-
-### InstructionMessage
-
-TODO: description of the purpose and usage of this message type.
-
-```
-[version, type, source, streamId, nodeAddresses]
-```
-Example:
-```
-["4.4.3", 1, "sender", "stream-id", ["address1", "address2"]]
-```
-
-Field    | Type | Description
--------- | ---- | --------
-`streamId` | `string` | TODO
-`nodeAddresses` | `array` | TODO
-
-### FindStorageNodesMessage
-
-TODO: description of the purpose and usage of this message type.
-
-```
-[version, type, source, streamId]
-```
-Example:
-```
-["4.4.3", 2, "sender", "stream-id"]
-```
-
-Field    | Type | Description
--------- | ---- | --------
-`streamId` | `string` | TODO
-
-### StorageNodesMessage
-
-TODO: description of the purpose and usage of this message type.
-
-```
-[version, type, source, streamId, nodeAddresses]
-```
-Example:
-```
-["4.4.3", 1, "sender", "stream-id", ["address1", "address2"]]
-```
-
-Field    | Type | Description
--------- | ---- | --------
-`streamId` | `string` | TODO
-`nodeAddresses` | `array` | TODO
-
-### WrapperMessage
-
-Encapsulates messages of the Control Layer.
-
-```
-[version, type, source, controlLayerPayload]
-```
-Example:
-```
-// This encapsulates a SubscribeRequest (See in Control Layer section)
-["4.4.3", 4, "sender", [2, 9, "stream-id", 0, "my-session-token"]]
-```
-
-Field    | Type | Description
--------- | ---- | --------
-`controlLayerPayload` | ControlMessage | The array representation of the encapsulated `ControlMessage` (See Control Layer).
-
-## Control Layer
-
-This document describes version `2` of the Control Layer protocol.
-
-All messages of the Control Layer are transmitted as JSON arrays and have the following structure with certain fields common to all messages: `[version, type, requestId, ...typeSpecificFields]`. 
+All messages are transmitted as JSON arrays and have the following structure with certain fields common to all messages: `[version, type, requestId, ...typeSpecificFields]`. 
 
 Field       | Type      | Description
 ----------- | --------- | -----------
-`version`   | `number`  | The protocol version of the Control Layer
+`version`   | `number`  | The version of the Control Protocol
 `type`      | `number`  | An integer identifying the message type (see the table below)
 `requestId` |  `string` | Identifies a particular `Request` message. The `requestId` can be chosen freely for each request, as long as it's unique within the context of a particular connection. The same `requestId` value gets echoed back in response messages that result from the request.
 
@@ -178,16 +78,17 @@ type | Description
 12 | ResendFromRequest
 13 | ResendRangeRequest
 
+
 The individual types are described in the remainder of this section. We start by describing the requests and then the responses.
 
 ### Requests sent
 
 #### PublishRequest
 
-Publishes a new message to a stream. Requires a write permission to the stream. Authentication requires the session token to be set. It contains a [Stream Layer](#stream-layer) message as a payload.
+Publishes a new message to a stream. Requires a write permission to the stream. Authentication requires the session token to be set. It contains a [Stream Protocol](#stream-protocol) message as a payload.
 
 ```
-[version, type, requestId, streamLayerMessage, sessionToken]
+[version, type, requestId, streamProtocolMessage, sessionToken]
 ```
 Example:
 ```
@@ -196,7 +97,7 @@ Example:
 
 Field    | Type | Description
 -------- | ---- | --------
-`streamLayerMessage`| `array` | The [Stream Layer](#stream-layer) message to publish.
+`streamProtocolMessage`| `array` | The [Stream Protocol](#stream-protocol) message to publish.
 `sessionToken` | `string` | User's session token retrieved with some authentication method.
 
 #### SubscribeRequest
@@ -269,7 +170,7 @@ Field    | Type | Description
 -------- | ---- | --------
 `streamId` | `string` | Stream id of the messages to resend.
 `streamPartition` | `number` | Partition id of the messages to resend. Optional, defaults to 0.
-`msgRef` | MessageRef | The array representation of the `MessageRef` to resend from. Defined in the Stream Layer.
+`msgRef` | MessageRef | The array representation of the `MessageRef` to resend from. Defined in the Stream Protocol.
 `publisherId` | `string` | The publisher id of the messages to resend. Can be `null` to resend the messages of all publishers.
 `sessionToken` | `string` | User's session token retrieved with some authentication method. Not required for public streams.
 
@@ -289,8 +190,8 @@ Field    | Type | Description
 -------- | ---- | --------
 `streamId` | `string` | Stream id of the messages to resend.
 `streamPartition` | `number` | Partition id of the messages to resend. Optional, defaults to 0.
-`fromMsgRef` | MessageRef | The array representation of the `MessageRef` of the first message to resend. Defined in the Stream Layer.
-`toMsgRef` | MessageRef | The array representation of the `MessageRef` of the last message to resend. Defined in the Stream Layer.
+`fromMsgRef` | MessageRef | The array representation of the `MessageRef` of the first message to resend. Defined in the Stream Protocol.
+`toMsgRef` | MessageRef | The array representation of the `MessageRef` of the last message to resend. Defined in the Stream Protocol.
 `publisherId` | `string` | Optional. Set both `publisherId` and `msgChainId` to resend only messages in a particular message chain. Set to `null` to resend messages for all publishers. 
 `msgChainId` | `string` | Optional. Set both `publisherId` and `msgChainId` to resend only messages in a particular message chain. Set to `null` to resend messages for all publishers.
 `sessionToken` | `string` | User's session token retrieved with some authentication method. Not required for public streams.
@@ -299,10 +200,10 @@ Field    | Type | Description
 
 #### BroadcastMessage
 
-A message addressed to all subscriptions listening on the stream. It wraps a [Stream Layer](#stream-layer) message to be consumed by subscribers.
+A message addressed to all subscriptions listening on the stream. It wraps a [Stream Protocol](#stream-protocol) message to be consumed by subscribers.
 
 ```
-[version, type, requestId, streamLayerMessage]
+[version, type, requestId, streamProtocolMessage]
 ```
 Example:
 ```
@@ -311,14 +212,14 @@ Example:
 
 Field    | Type | Description
 -------- | ---- | --------
-`streamLayerMessage` | `array` | The [Stream Layer](#stream-layer) message being broadcasted.
+`streamProtocolMessage` | `array` | The [Stream Protocol](#stream-protocol) message being broadcasted.
 
 #### UnicastMessage
 
-A message addressed in response to a specific resend request. It wraps a [Stream Layer](#stream-layer) message to be consumed by the subscriber.
+A message addressed in response to a specific resend request. It wraps a [Stream Protocol](#stream-protocol) message to be consumed by the subscriber.
 
 ```
-[version, type, requestId, streamLayerMessage]
+[version, type, requestId, streamProtocolMessage]
 ```
 Example:
 ```
@@ -327,7 +228,7 @@ Example:
 
 Field    | Type | Description
 -------- | ---- | --------
-`streamLayerMessage` | `array` | The [Stream Layer](#stream-layer) message being unicasted.
+`streamProtocolMessage` | `array` | The [Stream Protocol](#stream-protocol) message being unicasted.
 
 #### SubscribeResponse
 
@@ -431,15 +332,15 @@ Field    | Type | Description
 `errorMessage` | `string` | Human-readable message describing the error.
 `errorCode` | `string` | Machine-readable string describing the type of error.
 
-## Stream Layer
+## Stream Protocol
 
-This document describes Stream Layer version `32`.
+This document describes Stream Protocol version `32`.
 
-Stream Layer messages are the actual content in streams. They are identified by a [`MessageID`](#messageid), are chained together via a reference to the previous message, [`MessageRef`](#messageref) to establish message order, they are cryptographically signed by their publisher. The most prominent Stream Layer message is the [`StreamMessage`](#streammessage), which is used to transport arbitrary application-level messages from publishers to subscribers. Additionally, there are a few other message types used for requesting and delivering encryption keys.
+Messages of Stream Protocol are the actual content in streams. They are identified by a [`MessageID`](#messageid), are chained together via a reference to the previous message, [`MessageRef`](#messageref) to establish message order, they are cryptographically signed by their publisher. The most prominent message is the [`StreamMessage`](#streammessage), which is used to transport arbitrary application-level messages from publishers to subscribers. Additionally, there are a few other message types used for requesting and delivering encryption keys.
 
-It's worth noting that the following Control Layer messages contain a Stream Layer message: `PublishRequest`, `BroadcastMessage`, and `UnicastMessage`.
+It's worth noting that the following Control Protocol messages contain a Stream Protocol message: `PublishRequest`, `BroadcastMessage`, and `UnicastMessage`.
 
-All Stream Layer messages have the following structure:
+All Stream Protocol messages have the following structure:
 
  ```
  [version, msgId, prevMsgRef, messageType, contentType, encryptionType, groupKeyId, content, newGroupKey, signatureType, signature]
@@ -447,7 +348,7 @@ All Stream Layer messages have the following structure:
  
  Field        | Type      | Description
  ------------ | --------- | -----------
- `version`    | `number`  | The protocol version of the Stream Layer
+ `version`    | `number`  | The  version of the Stream Protocol
  `msgId`      | [`MessageID`](#messageid) | The [`MessageID`](#messageid) that uniquely identifies this message.
  `prevMsgRef` | [`MessageRef`](#messageref) | The [`MessageRef`](#messageref) pointing to the previous message on a message chain. Optional. Used to detect missing messages.
  `messageType`| `number`  | Determines how the message should be handled. See the table below.
@@ -496,7 +397,7 @@ Other content types, including binary types, will be defined in the future.
 `signatureType` | Name | Description | Signature payload fields to be concatenated in order
 -------------- | ---- |------------ | -----------------------
 0 | `NONE` | No signature. The `signature` field is null in this case. | None.
-2 | `ETH` | Ethereum signature produced by current clients (since Stream Layer version 30). The signature field is a hex-encoded string. | `streamId`, `streamPartition`, `timestamp`, `sequenceNumber`, `publisherId`, `msgChainId`, `prevMsgRef.timestamp`, `prevMsgRef.sequenceNumber`, `content`, `newGroupKey` (fields with `null` values are simply skipped)
+2 | `ETH` | Ethereum signature produced by current clients (since Stream Protocol version 30). The signature field is a hex-encoded string. | `streamId`, `streamPartition`, `timestamp`, `sequenceNumber`, `publisherId`, `msgChainId`, `prevMsgRef.timestamp`, `prevMsgRef.sequenceNumber`, `content`, `newGroupKey` (fields with `null` values are simply skipped)
 
 The concatenated payload is signed using the same [ECDSA and secp256k1 based method used in Ethereum](https://yos.io/2018/11/16/ethereum-signatures/).
 
@@ -540,7 +441,7 @@ The `content` encoded with `contentType=0` (JSON) is as follows:
  `rsaPublicKey`| `string` | The RSA public key of the requestor. The response will be encrypted for this public key.
  `groupKeyIds`| `array`   | An array of strings containing the `groupKeyIds` that are being requested.
  
-Example of a `GroupKeyRequest` including the rest of the `Stream Layer` fields:
+Example of a `GroupKeyRequest` including the rest of the `Stream Protocol` fields:
 
 ```
 [32, [...msgIdFields], [...msgRefFields], 28, 0, 0, null, "[\"requestId\", \"streamId\", \"rsaPublicKey\", [\"keyId\"]]", null, 2, "0x29c057786Fa..."]
@@ -564,7 +465,7 @@ The `content` encoded with `contentType=0` (JSON) is as follows:
  `streamId`   | `string`  | The stream for which a key is being delivered.
  `groupKeys`  | `array`   | Array of `[groupKeyId, encryptedGroupKeyHex]` pairs, containing the keys requested in the `GroupKeyRequest`. `encryptedGroupKeyHex` is a hex-encoded binary string, containing an RSA encrypted version of the group key.
  
-Example of a `GroupKeyResponse` including the rest of the `Stream Layer` fields:
+Example of a `GroupKeyResponse` including the rest of the `Stream Protocol` fields:
 
 ```
 [32, [...msgIdFields], [...msgRefFields], 29, 0, 1, "rsaPublicKey-from-the-request", "[\"requestId\", \"streamId\", [\"keyId\", \"encrypted-group-key\"]]", null, 2, "0x29c057786Fa..."]
@@ -589,7 +490,7 @@ The `content` encoded with `contentType=0` (JSON) is as follows:
  `streamId`   | `string`  | The stream for which a key is being delivered. 
   `groupKeys`  | `array`   | Array of [GroupKeys](#groupkey).
  
-Examples of a `GroupKeyAnnounce` messages including the rest of the `Stream Layer` fields:
+Examples of a `GroupKeyAnnounce` messages including the rest of the `Stream Protocol` fields:
 
 ```
 [32, [...msgIdFields], [...msgRefFields], 30, 0, 1, "rsaPublicKey-of-recipient", "[\"streamId\", [\"newGroupKeyId\", \"RSA-encrypted-group-key-hex\"]]", null, 2, "0x29c057786Fa..."]
@@ -621,7 +522,7 @@ The error response contains the list of keys for which the exchange failed, and 
  `errorMessage`| `string` | An error message intended for a human, explaining what went wrong.
  `groupKeyIds`| `array`   | An array of strings containing the `groupKeyIds` that were requested but could not be retrieved due to the error.
  
-Example of a `GroupKeyErrorResponse` including the rest of the `Stream Layer` fields:
+Example of a `GroupKeyErrorResponse` including the rest of the `Stream Protocol` fields:
 
 ```
 [32, [...msgIdFields], [...msgRefFields], 31, 0, 0, null, "[\"requestId\", \"streamId\", \"ERROR_CODE\", \"Error message\", [\"groupKeyId1\"]]", null, 2, "0x29c057786Fa..."]
@@ -629,7 +530,7 @@ Example of a `GroupKeyErrorResponse` including the rest of the `Stream Layer` fi
 
 ### MessageID
 
-Uniquely identifies a Stream Layer message.
+Uniquely identifies a Stream Protocol message.
 
 ```
 [streamId, streamPartition, timestamp, sequenceNumber, publisherId, msgChainId]
@@ -650,7 +551,7 @@ Field    | Type | Description
 
 ### MessageRef
 
-Used inside a Stream Layer message to identify the previous message on the same `msgChainId` (defined above). If the `MessageRef` is not provided by the publisher, then the stream will have weaker delivery guarantees, as subscribers will not be able to detect missing messages and request gapfills.
+Used inside a Stream Control message to identify the previous message on the same `msgChainId` (defined above). If the `MessageRef` is not provided by the publisher, then the stream will have weaker delivery guarantees, as subscribers will not be able to detect missing messages and request gapfills.
 
 ```
 [timestamp, sequenceNumber]
@@ -665,19 +566,103 @@ Field    | Type | Description
 `timestamp` | `number` | Timestamp of the `StreamMessage` published on the same stream and same partition by the same producer.
 `sequenceNumber` | `number` | Sequence Number of the `StreamMessage`.
 
-### GroupKey
 
-Used in key rotation to deliver a new key to existing subscribers. The format is as follows:
+## Tracker Protocol
+
+This document describes version `1` of the Tracker Control protocol.
+
+All messages are transmitted as JSON arrays and have the following structure with certain fields common to all messages: `[version, type, requestId, ...typeSpecificFields]`. 
+
+Field       | Type      | Description
+----------- | --------- | -----------
+`version`   | `number`  | The version of the Tracker Protocol
+`type`      | `number`  | An integer identifying the message type (see the table below)
+`requestId` |  `string` | Identifies a message. The `requestId` can be chosen freely for each request, as long as it's unique within the context of a particular connection. The same `requestId` value gets echoed back in response messages that result from the request.
+
+The `...typeSpecificFields` means that there are additional fields depending on message type. The possible message `type`s are:
+
+type | Description
+----------- | -----------
+1 | StatusMessage
+2 | InstructionMessage
+3 | StorageNodesRequest
+4 | StorageNodesResponse
+
+
+The individual types are described in the remainder of this section. We start by describing the requests and then the responses.
+
+These messages are exchanged between trackers and nodes for peer discovery and topology formation.
+
+### StatusMessage
+
+A node reports its status to the tracker using this message.
 
 ```
-[groupKeyId, encryptedGroupKey]
+[version, type, status]
 ```
 Example:
 ```
-["newGroupKeyId", "abc123"]
-``` 
+[2, 14, {
+    streams: [],
+    started: 0,
+    rtts: {}
+}]
+```
 
 Field    | Type | Description
 -------- | ---- | --------
-`groupKeyId` | `string` | Unique identifier of the key, arbitrarily chosen by the publisher.
-`encryptedGroupKey` | `string` | Hex-encoded, encrypted group key bytes. Encrypted with RSA or AES, depending on the `encryptionType` flag set on the surrounding message.
+`status` | `object` | state of node (details to be filled in later, subject to change)
+
+### InstructionMessage
+
+The tracker instructs nodes to connect to (and disconnect from) other nodes using this message.
+
+```
+[version, type, requestId, streamId, streamPartition, nodeAddresses, counter]
+```
+Example:
+```
+[2, 15, "request-id", "stream-id", 0, ["ws://address1", "ws://address2"], 10]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`streamId` | `string` | stream id
+`streamPartition` | `number` | stream partition
+`nodeAddresses` | `array` | list of nodes the receiving node should be connected to
+`counter` | `number` | incrementing counter value to keep track of latest instruction
+
+### StorageNodesRequest
+
+Sent by node to tracker to find a storage node for a stream.
+
+```
+[version, type, requestId, streamId, streamPartition]
+```
+Example:
+```
+[2, 16, "request-id", stream-id", 0]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`streamId` | `string` | stream id
+`streamPartition` | `number` | stream partition
+
+### StorageNodesResponse
+
+Response from tracker to node's `StorageNodesRequest` providing connection information of storage node.
+
+```
+[version, type, requestId, streamId, streamPartition, nodeAddresses]
+```
+Example:
+```
+[2, 17, "request-id", stream-id", 0, ["ws://storage-node-address-1", "ws://storage-node-address-2"]]
+```
+
+Field    | Type | Description
+-------- | ---- | --------
+`streamId` | `string` | stream id
+`streamPartition` | `number` | stream partition
+`nodeAddresses` | `array` | list of storage nodes associated with stream
