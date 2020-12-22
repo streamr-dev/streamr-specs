@@ -159,11 +159,11 @@ Field    | Type | Description
 Requests a resend, for a subscription id, of all messages of a particular publisher on a stream-partition, starting from a particular message defined by its reference. It carries a [`MessageRef`](#messageref) to define the starting point for the resend. Responses are either a sequence of `ResendResponseResending`, one or more `UnicastMessage`, and a `ResendResponseResent`; or a `ResendResponseNoResend` if there is nothing to resend.
 
 ```
-[version, type, requestId, streamId, streamPartition, fromMsgRef, publisherId, sessionToken]
+[version, type, requestId, streamId, streamPartition, fromMsgRef, publisherId, msgChainId, sessionToken]
 ```
 Example:
 ```
-[2, 12, "request-id", "stream-id", 0, [...msgRefFields], "publisher-id", "my-session-token"]
+[2, 12, "request-id", "stream-id", 0, [...msgRefFields], "publisher-id", "msg-chain-id" "my-session-token"]
 ```
 
 Field    | Type | Description
@@ -172,6 +172,7 @@ Field    | Type | Description
 `streamPartition` | `number` | Partition id of the messages to resend. Optional, defaults to 0.
 `msgRef` | MessageRef | The array representation of the `MessageRef` to resend from. Defined in the Stream Protocol.
 `publisherId` | `string` | The publisher id of the messages to resend. Can be `null` to resend the messages of all publishers.
+`msgChainId` | `string` | Optional. Set both `publisherId` and `msgChainId` to resend only messages in a particular message chain. Set to `null` to resend messages for all publishers.
 `sessionToken` | `string` | User's session token retrieved with some authentication method. Not required for public streams.
 
 #### ResendRangeRequest
