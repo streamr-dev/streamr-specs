@@ -618,18 +618,21 @@ Field    | Type | Description
 The tracker instructs nodes to connect to (and disconnect from) other nodes using this message.
 
 ```
-[version, type, requestId, streamId, streamPartition, nodeAddresses, counter]
+[version, type, requestId, streamId, streamPartition, nodeIds, counter]
 ```
 Example:
 ```
-[2, 15, "request-id", "stream-id", 0, ["ws://address1", "ws://address2"], 10]
+[2, 15, "request-id", "stream-id", 0, [
+    "0x1111111111111111111111111111111111111111", 
+    "0x2222222222222222222222222222222222222222"
+], 10]
 ```
 
 Field    | Type | Description
 -------- | ---- | --------
 `streamId` | `string` | stream id
 `streamPartition` | `number` | stream partition
-`nodeAddresses` | `array` | list of nodes the receiving node should be connected to
+`nodeIds` | `array` | list of nodes the receiving node should be connected to
 `counter` | `number` | incrementing counter value to keep track of latest instruction
 
 ### StorageNodesRequest
