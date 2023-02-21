@@ -44,7 +44,7 @@ This documentation describes the messages and entities in each sub-protocol.
 - [Tracker Protocol](#tracker-protocol)
     - [StatusMessage](#statusmessage)
     - [InstructionMessage](#instructionmessage)
-    - [StorageNodesRequest](sStoragenodesrequest)
+    - [StorageNodesRequest](#storagenodesrequest)
     - [StorageNodesResponse](#storagenodesresponse)
 
 ## Control Protocol
